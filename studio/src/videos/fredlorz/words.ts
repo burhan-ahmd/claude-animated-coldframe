@@ -5,7 +5,7 @@
 export type Card = { a: number; b: number; w: string };
 
 export const CARDS: Card[] = [
-  { a: 1, b: 6, w: "In" },
+  { a: 0, b: 6, w: "In" },
   { a: 6, b: 42, w: "1904" },
   { a: 42, b: 45, w: "the" },
   { a: 45, b: 52, w: "Olympic" },

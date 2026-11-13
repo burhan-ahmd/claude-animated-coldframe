@@ -50,6 +50,7 @@ def cards(words):
         if i:
             f = max(f, starts[-1] + MIN_HOLD)
         starts.append(f)
+    starts[0] = 0.0  # the first word is up from frame 0, so the table covers the film with no uncovered frame
     out = []
     for i, (_t, w) in enumerate(fixed):
         b = starts[i + 1] if i + 1 < len(starts) else TOTAL
