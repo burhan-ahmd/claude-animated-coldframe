@@ -108,9 +108,12 @@ const CAMS: Key[][] = [
     { f: 368, pos: [4.86, 1.74, 0.25], look: [1.9, 1.28, -3.3], fov: 43.2, roll: -0.4 },
     { f: 405, pos: [4.8, 1.7, -0.05], look: [1.86, 1.26, -3.35], fov: 42.4, roll: -0.2 },
   ],
-  [ // 6 — the tram recedes into the rain. The boat is left bobbing in the near foreground.
-    { f: 405, pos: [5.3, 2.02, 3.7], look: [0.35, 1.5, -18], fov: 34.0, roll: 0.8 },
-    { f: 450, pos: [5.2, 2.08, 3.95], look: [0.25, 1.46, -18.4], fov: 33.6, roll: 0.5 },
+  [ // 6 — the tram recedes into the rain. Pulled back and off the tram's line so one frame holds all three:
+    //     the boy at the frame's left edge (watching it go), the boat bobbing near the lens, the car small and
+    //     red-lamped down the street. The old key at x=5.3 put the boy at ndc -1.44 (out of frame) and left
+    //     only the car — checked with scripts/probe2.ts rather than another render.
+    { f: 405, pos: [4.15, 1.72, 5.6], look: [0.75, 1.2, -16], fov: 34.0, roll: 0.8 },
+    { f: 450, pos: [4.05, 1.78, 5.85], look: [0.65, 1.16, -16.4], fov: 33.6, roll: 0.5 },
   ],
 ];
 
@@ -123,8 +126,9 @@ const DOF: Array<{ cInf: number; focus?: (f: number) => [number, number, number]
   // 5 the boy, NOT the doorway: doorWorldZ(f) tracks a tram that left at f = 300, so focusing there put the
   //   shot's 23 m of softness on empty street and turned the boy 3.6 m away into an unreadable smear.
   { cInf: 10.0, focus: (f) => [boyPos(f).x, 0.95, boyPos(f).z] },
-  // 6 deep enough to read both ends of the story: the boy 7.5 m out and the tram 40-58 m down the street
-  { cInf: 5.5, focus: () => [2.6, 1.7, -7.9] },
+  // 6 focus on the boy: that keeps him and the boat (9-10 m) crisp and lets the tram soften as it recedes
+  //   (cInf 7 -> about 5 px of CoC at 50 m, which reads as rain haze rather than blur)
+  { cInf: 7.0, focus: (f) => [boyPos(f).x, 0.95, boyPos(f).z] },
 ];
 
 /** Night grade: the fitted reference curve family (grade.ts) re-fit for a rain-night key. Darks are pressed to
