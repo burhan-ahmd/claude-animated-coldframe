@@ -30,10 +30,13 @@ up to 20 parallel machines at zero cost.
    render. If it fails, fix assets; do not retry the render.
 7. **The repo is a platform, not a one-off.** Every new video = new composition folder + assets in
    the same repo. `git push` to `main`, dispatch, done.
-8. **A voiceover video MUST ship with on-screen subtitles.** If the composition plays narration (any
-   voice `<Audio>` track), it must also burn **word-synced captions** into the picture. No exceptions
-   for "narration-only" cuts, and no separate `.srt` sidecar — most vertical platforms show no
-   captions by default and many people watch muted. Captions are pixels: adding them later means
+8. **A voiceover video MUST ship with on-screen subtitles, in the locked house style.** If the
+   composition plays narration (any voice `<Audio>` track), it must also burn **word-synced captions**
+   into the picture — one word at a time in **Lilita One**, off-white fill, thick ink outline, hard
+   offset shadow, at 75% height (exact values: Step 3). Never restyle the captions per video, never
+   pick a different font, never ask the user about the caption style again — it is decided. No
+   exceptions for "narration-only" cuts, and no separate `.srt` sidecar: most vertical platforms show
+   no captions by default and many people watch muted. Captions are pixels: adding them later means
    re-rendering the whole film, so build them **before** the first full render. Recipe in Step 3.
    (Silent videos — music/SFX only — have no subtitles.)
 
@@ -143,20 +146,34 @@ Silent videos skip this. Everything below is the part that goes wrong if you ski
 - **Draw it above the crossfade stack.** `<WordCaptions />` must be a **sibling** of the shot map in
   the `AbsoluteFill` (`{layersAt(f).map(...)} <WordCaptions />`), never inside a shot — otherwise a
   fading place fades its caption mid-swap.
+- **The caption look is LOCKED — it is the user's house style.** Every voiceover video uses exactly
+  this style, never a per-video restyle, never another font:
+
+  | | value (from the `CAP` object in `src/videos/fredlorz/captions.tsx`) |
+  |---|---|
+  | face | **Lilita One** — OFL, committed at `studio/public/fonts/LilitaOne-Regular.ttf` |
+  | size | 176 px, `lineHeight: 1`, `letterSpacing: "-0.01em"`, `whiteSpace: "nowrap"` |
+  | fill | `#fbf7ef` (off-white) |
+  | outline | 13 px `#17161d`, `paintOrder: "stroke fill"` |
+  | shadow | hard offset only, `0 10px 0 rgba(23,22,29,0.28)` — **no blur** |
+  | position | `centreY 1450` (75% of 1920), horizontally centred, 40 px side insets |
+  | motion | 5-frame pop: scale `0.90 → 1.00` + `0.04·sin(πk)` overshoot, rising 16 px, `transformOrigin 50% 50%` |
+  | rhythm | one word at a time, replaced on its measured onset |
+
+  Start every new video by copying `src/videos/fredlorz/captions.tsx` and changing **nothing** but
+  the timing import (`words.ts`). If a film genuinely needs different treatment, ask the user first —
+  do not invent a variant.
 - **Commit the font, and load it behind `delayRender`.** Cloud runners have no font you can rely on;
-  a silent fallback changes every glyph's width and the whole look. Put the `.ttf` + its licence
-  under `studio/public/fonts/`, load it with the `FontFace` API, and only `continueRender()` after
-  `await face.load()` (`cancelRender(e)` on failure). Note this TS DOM lib lacks `FontFaceSet.add` —
-  cast: `(document.fonts as unknown as Set<FontFace>).add(face)`.
+  a silent fallback changes every glyph's width and the whole look. The `.ttf` + its licence live
+  under `studio/public/fonts/`, loaded with the `FontFace` API, and `continueRender()` is only called
+  after `await face.load()` (`cancelRender(e)` on failure). Note this TS DOM lib lacks
+  `FontFaceSet.add` — cast: `(document.fonts as unknown as Set<FontFace>).add(face)`.
 - **Size it from the real `hmtx` advances, not by eye.** Compute the widest card in em, then pick a
   size where it still clears ~150 px of each edge (Lilita One, widest `Roosevelt` = 4.199 em →
-  739 px at 176 px). Otherwise one word overflows the frame and you find out after the render.
-- **Style:** off-white fill (`#fbf7ef`), thick near-black outline (`#17161d`, 13 px, `paintOrder:
-  "stroke fill"`) and a *hard* offset shadow — no blur, so it matches the film's ink lines.
-  `-webkit-text-stroke` splits the stroke across the glyph edge (only half is outside), so pick the
-  width by looking at a full-resolution crop, not at a thumbnail.
-- **Place it at ~75% of frame height** (`centreY 1450` on 1920): clear of faces in close-ups, above
-  the platform UI strips (~1630+).
+  739 px at 176 px). Re-check if a new script has a longer word — the 176 px is a measured value, not
+  a taste value.
+- **`-webkit-text-stroke` splits the stroke across the glyph edge** (only half is outside), so judge
+  the outline width on a **full-resolution crop**, never on a thumbnail.
 - **Gate the font in `scripts/check-assets.mjs`** — the render then fails in seconds instead of after
   20 machines have run.
 - **Subtitles mean a full re-render.** They are burned into the pixels; there is no caption track to

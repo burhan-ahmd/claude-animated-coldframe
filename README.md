@@ -62,10 +62,14 @@ Or open it in the Remotion preview with `npm run studio`.
   timings with speech-to-text.
 
 > **Every video with a voiceover must include subtitles.** If the video has narration, Claude must burn word-synced
-> captions into the picture (one word at a time, timed to the word onsets, with a committed font) — no subtitle-free
-> voiceover videos and no separate `.srt`. They are burned in at render time, so they are built before the render.
-> The rule and the full recipe live in [`INSTRUCTIONS.md`](INSTRUCTIONS.md) (Golden Rule 8, Step 3); the worked
-> example is `studio/src/videos/fredlorz/captions.tsx` + `studio/shorts/fredlorz/build_words.py`.
+> captions into the picture — no subtitle-free voiceover videos and no separate `.srt`. They are burned in at render
+> time, so they are built before the render.
+>
+> **The caption look is locked to the house style the user chose:** one word at a time, popping in on its onset, in
+> **Lilita One** — off-white `#fbf7ef` fill, 13 px `#17161d` ink outline, hard offset shadow, centred at 75% of the
+> frame height. Do not restyle it per video and do not pick another font. The rule and the exact values live in
+> [`INSTRUCTIONS.md`](INSTRUCTIONS.md) (Golden Rule 8, Step 3); the reference is
+> `studio/src/videos/fredlorz/captions.tsx` + `studio/shorts/fredlorz/build_words.py`.
 
 ## What's inside
 
