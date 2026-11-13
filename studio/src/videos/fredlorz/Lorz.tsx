@@ -3,7 +3,9 @@
 // as the bridge study): InkPass (world ink lines, own pass) -> lens blur pre + main (thin-lens DOF per shot from
 // dofAt) -> [bloom (emissive only) + NEUTRAL tone mapping + colour grade] (one merged EffectPass), MSAA 4. There is
 // no white flash in this film: the three place/time ellipses (frames 508, 781, 878) are plain 8-frame crossfades.
-// The narrator's mixed soundtrack (voice + music + SFX, -16 LUFS) is committed as one WAV and played here.
+// The narrator's mixed soundtrack (voice + music + SFX, -16 LUFS) is committed as one WAV and played here, and the
+// narration's words ride on top as one-at-a-time captions (captions.tsx over words.ts, above the crossfade stack so
+// a fading place never fades its caption).
 import React, { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { AbsoluteFill, Audio, continueRender, delayRender, getInputProps, staticFile, useCurrentFrame } from "remotion";
@@ -12,6 +14,7 @@ import { useThree } from "@react-three/fiber";
 import { EffectComposer } from "@react-three/postprocessing";
 import { BlendFunction, BloomEffect, ToneMappingEffect, ToneMappingMode } from "postprocessing";
 import { World, loadKit } from "./world";
+import { WordCaptions } from "./captions";
 import { InkPass, noInkFallback } from "../bridge/ink";
 import { LensBlur, GrainEffect } from "../bridge/lensblur";
 import { GradeEffect, GRADES, GRADE_STRENGTH, gradeFor } from "../bridge/grade";
@@ -108,6 +111,7 @@ export const FredLorz: React.FC = () => {
   return (
     <AbsoluteFill style={{ background: "#cfe3f2" }}>
       {layersAt(f).map((l, i) => <ShotView key={i ? "over" : "base"} id={l.id} kit={kit} alpha={l.alpha} />)}
+      <WordCaptions />
       <Audio src={staticFile("audio/fredlorz.wav")} />
     </AbsoluteFill>
   );
