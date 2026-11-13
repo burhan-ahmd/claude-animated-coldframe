@@ -14,13 +14,17 @@ const KENNEY = ["tree_oak", "tree_default", "tree_detailed", "tree_fat", "tree_c
 const out = path.resolve("public/bridge/kenney");
 const tex = path.join(out, "Textures", "colormap.png"); // Fantasy Town models read their colours from this
 const wav = path.resolve("public/audio/smoke-15s.wav");
+const fredWav = path.resolve("public/audio/fredlorz.wav");            // "Fred Lorz, 1904" mixed soundtrack
+const fredVoice = path.resolve("public/audio/fredlorz-voice.mp3");    // its narration, for provenance
 
 const missing = KENNEY.filter((n) => !fs.existsSync(path.join(out, `${n}.glb`)));
 if (!fs.existsSync(tex)) missing.push("Textures/colormap.png");
 if (!fs.existsSync(wav)) missing.push("public/audio/smoke-15s.wav");
+if (!fs.existsSync(fredWav)) missing.push("public/audio/fredlorz.wav");
+if (!fs.existsSync(fredVoice)) missing.push("public/audio/fredlorz-voice.mp3");
 if (missing.length) {
   console.error(`MISSING ASSETS (${missing.length}):\n  ` + missing.join("\n  "));
-  console.error("Run `npm run models` (needs network) and `python shorts/bridge/audio/smoke_audio.py` locally, then commit.");
+  console.error("Run `npm run models` (needs network), `python shorts/bridge/audio/smoke_audio.py` and `python shorts/fredlorz/audio/fredlorz_audio.py` locally, then commit.");
   process.exit(1);
 }
-console.log(`assets ok: ${KENNEY.length} Kenney models + colormap.png + smoke-15s.wav (${(fs.statSync(wav).size / 1e6).toFixed(1)} MB)`);
+console.log(`assets ok: ${KENNEY.length} Kenney models + colormap.png + smoke-15s.wav (${(fs.statSync(wav).size / 1e6).toFixed(1)} MB) + fredlorz.wav (${(fs.statSync(fredWav).size / 1e6).toFixed(1)} MB)`);
