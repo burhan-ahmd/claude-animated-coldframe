@@ -1,0 +1,59 @@
+# Render this Remotion project in the cloud with coldframe.
+# Start it from the Actions tab ("Run workflow") or with: coldframe render <CompositionId>
+# The MP4 is attached to the run; `coldframe render` downloads it to out/cloud/.
+#
+# Custom for this repo (EssouliAnas/claude-animated-coldframe): unlike the stock template, the
+# Remotion project lives in studio/, the 3D Kenney models and the committed soundtrack are
+# verified BEFORE any render machine starts, and the WebGL/frame timeouts are raised for this
+# heavy three.js scene rendered in software (swangle) on GitHub's GPU-less runners.
+
+name: coldframe
+
+on:
+  workflow_dispatch:
+    inputs:
+      composition:
+        description: Composition id
+        required: true
+        default: ColdframeSmokeTest
+      chunks:
+        description: Parallel machines (1-20)
+        default: "2"
+      props:
+        description: Input props (JSON)
+        default: "{}"
+      output-name:
+        description: Output file name (optional)
+        default: ""
+
+jobs:
+  verify-assets:
+    name: Verify models + soundtrack
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Check the bundle will find every asset
+        working-directory: studio
+        run: node scripts/check-assets.mjs
+
+  render:
+    needs: verify-assets
+    uses: Razee4315/coldframe/.github/workflows/render.yml@v1
+    with:
+      composition: ${{ inputs.composition }}
+      chunks: ${{ fromJSON(inputs.chunks) }}
+      props: ${{ inputs.props }}
+      output-name: ${{ inputs.output-name }}
+      # the Remotion project (package.json, src/, public/) sits in studio/
+      project-dir: studio
+      # three.js/WebGL without a GPU: swangle draws in software (looks identical, slower)
+      gl: swangle
+      # heavy 3D frames (MSAA 4 + ink + DOF + bloom) exceed the 120 s default per frame
+      frame-timeout: 300000
+      # a stuck chunk must not burn hours of minutes
+      chunk-timeout: 120
+      # 450-frame test: two chunks of 225 frames; never make a chunk shorter than 60 frames
+      min-frames-per-chunk: 60

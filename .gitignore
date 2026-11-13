@@ -1,0 +1,16 @@
+node_modules/
+studio/out/
+studio/backup/
+studio/shorts/*/audio/_cache/
+/out/
+# the Kenney CC0 models ARE committed on purpose: the cloud render must find them at bundle time
+# (get-models.mjs skips downloads when they are already present, so this stays reproducible)
+# reference frames from the studied channel: style study only, never redistributed
+references/frames/
+references/sheets/
+# render output, voice and audio stems are big; keep scripts only
+studio/shorts/*/voice/*.wav
+studio/shorts/*/audio/*.wav
+studio/shorts/*/audio/stems/
+.env
+studio/shorts/molasses/
