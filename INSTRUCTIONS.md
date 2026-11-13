@@ -30,6 +30,12 @@ up to 20 parallel machines at zero cost.
    render. If it fails, fix assets; do not retry the render.
 7. **The repo is a platform, not a one-off.** Every new video = new composition folder + assets in
    the same repo. `git push` to `main`, dispatch, done.
+8. **A voiceover video MUST ship with on-screen subtitles.** If the composition plays narration (any
+   voice `<Audio>` track), it must also burn **word-synced captions** into the picture. No exceptions
+   for "narration-only" cuts, and no separate `.srt` sidecar — most vertical platforms show no
+   captions by default and many people watch muted. Captions are pixels: adding them later means
+   re-rendering the whole film, so build them **before** the first full render. Recipe in Step 3.
+   (Silent videos — music/SFX only — have no subtitles.)
 
 ---
 
@@ -49,11 +55,14 @@ claude-animated-coldframe/               ← local folder; the public repo is gi
     ├── package.json
     ├── src/Root.tsx                     ← register every composition here
     ├── src/videos/                      ← compositions, one folder per video topic
-    │   └── bridge/                      ← example: SmokeTest.tsx (450f), BridgeShort.tsx (2025f)
+    │   ├── bridge/                      ← example: SmokeTest.tsx (450f), BridgeShort.tsx (2025f)
+    │   └── fredlorz/                    ← voiceover reference: captions.tsx + generated words.ts (subtitles)
     ├── public/                          ← static assets, COMMITTED so every cloud machine sees them
     │   ├── bridge/kenney/               ← 26 CC0 GLB models + Textures/colormap.png
+    │   ├── fonts/                       ← caption face + its licence (Lilita One, OFL)
     │   └── audio/                       ← soundtracks (e.g. smoke-15s.wav, 15.000 s verified)
     ├── shorts/<topic>/audio/            ← Python audio generators (music.py, sfx.py, smoke_audio.py)
+    ├── shorts/<topic>/build_words.py    ← word onsets → captions data module (voiceover videos)
     └── scripts/
         ├── check-assets.mjs             ← asset gate (every referenced GLB + audio must exist)
         └── short_qa.py                  ← frame-by-frame QA of a downloaded MP4
@@ -111,6 +120,48 @@ Timing is everything. **30 fps: `frame = round(seconds × 30)`; 1 s of video = 3
   ```
 - `id` must be unique per video; this id is what you pass to the render.
 
+#### Subtitles — MANDATORY when the video has a voiceover (rule 8)
+
+Reference implementation: `studio/shorts/fredlorz/build_words.py` → `src/videos/fredlorz/words.ts`
++ `src/videos/fredlorz/captions.tsx` (built for the Fred Lorz film; one word at a time, popping).
+Silent videos skip this. Everything below is the part that goes wrong if you skip it.
+
+- **Timing comes from the word onsets, never from your own guess.** Generate a data module instead of
+  hand-writing frames: a small `studio/shorts/<topic>/build_words.py` reads the SRT/`word.txt` and
+  writes `src/videos/<topic>/words.ts` — one `{a, b, w}` per word, gap-free, `a` of card *n+1* = `b`
+  of card *n*, and the table must cover frame 0 through the last frame (no uncovered frame, or
+  `cardAt()` silently falls back).
+- **Two repairs are always needed on real ASR output, and both must only ever push a word later:**
+  1. a **non-monotonic** onset (transcribers do emit words out of order — Fred's file lists `life.`
+     at 26.16 s *after* `A` at 26.04 s) is pulled to ~50 ms after the previous word, keeping the
+     spoken order;
+  2. a card is **never replaced sooner than 3 frames** after it appeared — six words in that
+     narration were 2–3 frames apart, which is an unreadable flash.
+
+  Then measure the drift those repairs cost and state the worst case in the commit. Under ~2 frames
+  (67 ms) is invisible; the Fred film's worst is 1.5 f on `A`.
+- **Draw it above the crossfade stack.** `<WordCaptions />` must be a **sibling** of the shot map in
+  the `AbsoluteFill` (`{layersAt(f).map(...)} <WordCaptions />`), never inside a shot — otherwise a
+  fading place fades its caption mid-swap.
+- **Commit the font, and load it behind `delayRender`.** Cloud runners have no font you can rely on;
+  a silent fallback changes every glyph's width and the whole look. Put the `.ttf` + its licence
+  under `studio/public/fonts/`, load it with the `FontFace` API, and only `continueRender()` after
+  `await face.load()` (`cancelRender(e)` on failure). Note this TS DOM lib lacks `FontFaceSet.add` —
+  cast: `(document.fonts as unknown as Set<FontFace>).add(face)`.
+- **Size it from the real `hmtx` advances, not by eye.** Compute the widest card in em, then pick a
+  size where it still clears ~150 px of each edge (Lilita One, widest `Roosevelt` = 4.199 em →
+  739 px at 176 px). Otherwise one word overflows the frame and you find out after the render.
+- **Style:** off-white fill (`#fbf7ef`), thick near-black outline (`#17161d`, 13 px, `paintOrder:
+  "stroke fill"`) and a *hard* offset shadow — no blur, so it matches the film's ink lines.
+  `-webkit-text-stroke` splits the stroke across the glyph edge (only half is outside), so pick the
+  width by looking at a full-resolution crop, not at a thumbnail.
+- **Place it at ~75% of frame height** (`centreY 1450` on 1920): clear of faces in close-ups, above
+  the platform UI strips (~1630+).
+- **Gate the font in `scripts/check-assets.mjs`** — the render then fails in seconds instead of after
+  20 machines have run.
+- **Subtitles mean a full re-render.** They are burned into the pixels; there is no caption track to
+  add to an existing MP4. Build them before dispatch and count them in the frame budget.
+
 ### Step 4 — Models
 - Reuse the committed CC0 kit: `studio/public/bridge/kenney/` (26 GLBs + `Textures/colormap.png`).
 - New models (only if the story needs them): download CC0 GLBs into
@@ -126,8 +177,9 @@ Timing is everything. **30 fps: `frame = round(seconds × 30)`; 1 s of video = 3
   48 kHz stereo 24-bit WAV**, write to `studio/public/audio/<video>.wav`. Verify with ffprobe
   (`duration` must match the composition exactly).
 - **Voiceover provided:** put the WAV/MP3 at `studio/public/audio/voice.<ext>`, add `<Audio src={staticFile("audio/voice.<ext>")} />` as the master track, and mix a music bed well under it
-  (music ≈ −30 LUFS short-term under speech). **This mode is not yet exercised end-to-end —
-  run a full cloud render + QA on the first voiceover video before trusting it.**
+  (music ≈ −30 LUFS short-term under speech). **A voiceover video also needs burned-in word-synced
+  subtitles — rule 8, recipe in Step 3.** Worked end-to-end reference: `src/videos/fredlorz/`
+  (voice + music + SFX mastered to −16 LUFS / −1.2 dBTP, captions from `new_story/word.txt`).
 - Never use `Math.random()` for note placement (see Step 3 determinism rule).
 
 ### Step 6 — Write the QA shot map

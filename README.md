@@ -61,6 +61,12 @@ Or open it in the Remotion preview with `npm run studio`.
 - **Your own voice**: record the script, save it as `studio/shorts/<name>/voice/voice.wav`, and Claude makes the word
   timings with speech-to-text.
 
+> **Every video with a voiceover must include subtitles.** If the video has narration, Claude must burn word-synced
+> captions into the picture (one word at a time, timed to the word onsets, with a committed font) — no subtitle-free
+> voiceover videos and no separate `.srt`. They are burned in at render time, so they are built before the render.
+> The rule and the full recipe live in [`INSTRUCTIONS.md`](INSTRUCTIONS.md) (Golden Rule 8, Step 3); the worked
+> example is `studio/src/videos/fredlorz/captions.tsx` + `studio/shorts/fredlorz/build_words.py`.
+
 ## What's inside
 
 | Path | What it is |
