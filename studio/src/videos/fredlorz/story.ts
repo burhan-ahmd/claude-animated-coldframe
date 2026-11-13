@@ -229,8 +229,10 @@ const S4c = (f: number) => dolly([-27.5, 1.75, 5.8], [Fx(f) + 2.2, 0.95, 0.5], p
 // shot 5: into the tape (officials, Alice) and the wreath
 const S5a = (f: number) => dolly([106.2, 0.85, 4.1], [110, 1.0, 0], pushK(f, 508, 0.002), { fov: 40 });
 const S5b = (f: number) => dolly([104.5, 2.6, 8.6], [110.8, 1.0, -1.2], pushK(f, 524, 0.0015), { fov: 44 });
-const S5c = (f: number) => dolly([112.0, 1.6, 4.6], [114.55, 1.25, 0.9], pushK(f, 553, 0.002), { fov: 38 });
-const S5d = (f: number) => dolly([111.3, 1.5, 6.9], [113.1, 1.1, 0.65], pushK(f, 576, 0.0015), { fov: 38 });
+const S5c = (f: number) => dolly([111.5, 1.6, 4.5], [113.0, 1.25, 0.6], pushK(f, 553, 0.002), { fov: 38 });
+// the two-shot on the pair (Fred 111.91 + Alice 113.0, wreath 0.62 wide): fov 40 at 6.6 m is 2.72 m across, so both
+// figures sit ~0.8 m inside their frame edge and the wreath arc from her hands to his head stays in frame the whole way
+const S5d = (f: number) => dolly([111.6, 1.5, 7.0], [112.45, 1.22, 0.4], pushK(f, 576, 0.0012), { fov: 40 });
 // shot 6: the crowd turns on him (yeller), then his shocked face
 const S6a = (f: number) => dolly([110.5, 2.4, 7.4], [114.0, 1.0, -2.0], pushK(f, 628, 0.0018), { fov: 44 });
 const S6b = (f: number) => dolly([115.2, 1.5, -3.4], [117.6, 1.35, -7.4], pushK(f, 645, 0.002, 0.005, 24), { fov: 40 });
@@ -272,8 +274,8 @@ const CAMS: Record<number, Key[]> = {
   5: [
     { f: 508, s: S5a },           // cut (place ellipsis, xfaded): the tape ahead
     { f: 524, dur: 22, s: S5b },
-    { f: 553, dur: 22, s: S5c },
-    { f: 576, dur: 26, s: S5d },
+    { f: 553, dur: 22, s: S5c },  // settles on Alice under "Alice Roosevelt"
+    { f: 576, cut: true, s: S5d }, // cut on "crowned": static two-shot as the wreath comes over him
   ],
   6: [
     { f: 628, s: S6a },
@@ -338,8 +340,8 @@ export const DOF: Dof[] = [
   { f: 460, cInf: 12, focus: (f) => [Fx(f), 1.0, 0.5] },
   { f: 508, cInf: 10, focus: (f) => [Fx(f), 1.1, 0.35] },
   { f: 524, dur: 22, cInf: 6 },
-  { f: 553, cInf: 12, focus: () => [114.55, 1.3, 0.95] },
-  { f: 576, cInf: 8, focus: () => [113.0, 1.2, 0.6] },
+  { f: 553, cInf: 12, focus: () => [113.0, 1.3, 0.6] },
+  { f: 576, cInf: 8, focus: () => [112.45, 1.28, 0.45] },
   { f: 628, cInf: 6 },
   { f: 645, cInf: 13, focus: () => [117.6, 1.4, -7.6] },
   { f: 672, cInf: 14, focus: () => [111.91, 1.42, 0.3] },
