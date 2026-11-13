@@ -6,7 +6,7 @@
 // Dissolves stack a second ThreeCanvas for their six frames, exactly as the reference does.
 import React, { useEffect, useMemo } from "react";
 import * as THREE from "three";
-import { AbsoluteFill, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Audio, staticFile, useCurrentFrame } from "remotion";
 import { ThreeCanvas } from "@remotion/three";
 import { useThree } from "@react-three/fiber";
 import { EffectComposer } from "@react-three/postprocessing";
@@ -101,6 +101,9 @@ export const TramShort: React.FC = () => {
   const f = useCurrentFrame();
   return (
     <AbsoluteFill style={{ background: "#05070d" }}>
+      {/* the film's own 15 s of ambience + SFX (shorts/tram/audio/tram_audio.py), embedded so every
+          coldframe chunk carries its exact PCM slice and the stitched MP4 is in sync. Silent film: no voice. */}
+      <Audio src={staticFile("audio/tram-15s.wav")} />
       {layersAt(f).map((l, i) => <ShotView key={i ? "over" : "base"} id={l.id} alpha={l.alpha} />)}
     </AbsoluteFill>
   );
