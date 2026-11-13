@@ -44,6 +44,7 @@ claude-animated-coldframe/               ← the one public repo
 ├── README.md                            ← quick-start
 ├── .github/workflows/coldframe.yml      ← THE render workflow (dispatch with knobs)
 ├── setup.ps1                            ← one-time local setup (npm + Kenney models)
+├── scripts/fastdl.ps1                   ← parallel-segment fast downloader for release assets
 └── studio/                              ← the Remotion + three.js project
     ├── package.json
     ├── src/Root.tsx                     ← register every composition here
@@ -248,21 +249,35 @@ repo's fast-download job) attaches the MP4 to a GitHub Release.
 **Problem observed:** `gh run download` of the 35 MB final MP4 took minutes and, run in the
 foreground, blocked everything.
 
-**Fixes (both in place):**
+**Fixes (all in place):**
 1. **Always download in the background** the moment the run completes, and do QA prep meanwhile.
-2. **The workflow now publishes every finished MP4 as a GitHub Release asset** (the
+2. **The workflow publishes every finished MP4 as a GitHub Release asset** (the
    `fast-download` job in `coldframe.yml`, `needs: render`, `continue-on-error` so it can never
    break a successful render). Release assets:
-   - download via CDN at browser speeds, no `gh` auth needed,
-   - **never expire** (artifacts auto-delete after 90 days),
-   - work with plain `curl`:
-     ```powershell
-     curl.exe -L -o out\cloud\your-video.mp4 `
-       "https://github.com/burhan-ahmd/claude-animated-coldframe/releases/download/render-<run-id>/<file>.mp4"
-     ```
-3. **Don't download the 20 `coldframe-part-XX` artifacts** — only the final one
+   - download via CDN, no `gh` auth needed,
+   - **never expire** (artifacts auto-delete after 90 days).
+3. **Use the release asset** (single-stream `curl` is enough — see measured speeds below;
+   `scripts/fastdl.ps1` exists for parallel segments but gave no extra gain on a ~1.4 MB/s line):
+   ```powershell
+   curl.exe -sL --retry 3 -o "E:\2026\EssouliAnas_animation_coldframe\out\cloud\<file>.mp4" `
+     "https://github.com/burhan-ahmd/claude-animated-coldframe/releases/download/render-<run-id>/<file>.mp4"
+   ```
+   **Measured bake-off (34 MB MP4, run 43369948536):**
+   | Path | Time | Speed |
+   |---|---|---|
+   | `gh run download` (artifact) | **149 s** | 0.23 MB/s ← the slow old path |
+   | release asset, single-stream curl | **23.9 s** | 1.4 MB/s = the line's full speed |
+   | release asset, parallel ×8 (`fastdl.ps1`) | ~22 s | no gain — line-limited |
+   All three copies SHA256-identical → the release path is byte-exact. **Rule of thumb: release +
+   curl ≈ 6× faster; the floor is the connection (~1.4 MB/s here).** Start the download in the
+   background the second the run turns green and do QA prep meanwhile.
+   `fastdl.ps1` verifies every segment size and the final total, so a truncated download cannot
+   pass silently; keep it for larger files or faster connections.
+4. **Don't download the 20 `coldframe-part-XX` artifacts** — only the final one
    (`--name <output-name-without-.mp4>`). The parts are only needed to re-stitch manually (never
    needed so far).
+5. **Verify what landed:** SHA256 of the downloaded MP4 against the release-asset expectation, or
+   at minimum ffprobe `nb_frames` before QA. A fast download that lies is worse than a slow one.
 
 ---
 
@@ -286,6 +301,9 @@ foreground, blocked everything.
 | 14 | Pushing workflow after dispatch does nothing | `workflow_dispatch` reads the default branch AT DISPATCH — commit + push first, then run |
 | 15 | Non-deterministic frames would corrupt chunk stitching | No unseeded randomness in compositions; identical frame number must render identically on any machine |
 | 16 | npm/audio caches accidentally committed | `_cache/` gitignored; eyeball `git status` before every push (golden rule 4) |
+| 17 | `gh release create --clobber` → `unknown flag` (release never created) | `--clobber` only exists on `gh release upload`. Keep create flag-free; fallback upload may use `--clobber`. Fixed in `fast-download` job |
+| 18 | `fastdl.ps1` failed instantly: `"parallel x$Segments:"` = PowerShell parse error | In double-quoted strings, `$var:` parses as a scoped variable — write `${var}`. Same trap for any `$x:` inside `"` |
+| 19 | Nested `powershell -File` printed conda profile errors | User's `profile.ps1` breaks under nested shells; invoke with `-NoProfile` |
 
 ---
 
@@ -305,7 +323,8 @@ npx github:Razee4315/coldframe render <CompId> --chunks 20 --name <video>.mp4
 # --- monitor / fetch ---
 gh run watch <runId> --repo burhan-ahmd/claude-animated-coldframe --interval 15 --exit-status
 gh run download <runId> --repo burhan-ahmd/claude-animated-coldframe --name <video> --dir ..\..\out\cloud
-#   fast alt: release asset at https://github.com/burhan-ahmd/claude-animated-coldframe/releases/tag/render-<runId>
+#   fast alt: scripts\fastdl.ps1 -Url <release asset URL> -Out ..\..\out\cloud\<video>.mp4
+#   release listing: https://github.com/burhan-ahmd/claude-animated-coldframe/releases
 
 # --- QA ---
 ffprobe -v error -show_entries stream=nb_frames,r_frame_rate,width,height:format=duration -of default out\cloud\<video>.mp4
@@ -318,9 +337,11 @@ python studio\scripts\short_qa.py out\cloud\<video>.mp4 out\qa out\qa\<video>_sh
 
 - **Voiceover + SRT mode** (§3 Step 5) is specified but not yet exercised end-to-end — validate on
   the first voiceover video (full cloud render + QA) before trusting it.
-- **The `fast-download` release job** was added to `coldframe.yml` and validated by a 450-frame
-  rerun; if a future run shows the job failing (it is `continue-on-error`), the artifact path in
-  §3 Step 11 still delivers — report it, don't silently ignore it.
+- **The `fast-download` release job** failed on its first live run (`gh release create --clobber`
+  is not a valid flag — issue #17); the flag fix is pushed. The release-download side was fully
+  validated manually (release `render-43369948536` exists; curl download 23.9 s, SHA256-identical
+  to the artifact copy). The fixed job will exercise itself on the next real render; if it ever
+  fails (it is `continue-on-error`), the artifact path still delivers — report it, don't ignore it.
 - **Stragglers:** a single heavy shot section can dominate wall time; chunk sizes are uniform, not
   content-aware.
 - **Remotion Lambda** would be faster still but costs money + AWS — deliberately not used.
@@ -328,4 +349,6 @@ python studio\scripts\short_qa.py out\cloud\<video>.mp4 out\qa out\qa\<video>_sh
 - **2025-frame `BridgeShort`** has not been cloud-rendered yet (needs its full soundtrack generated
   and wired first — `smoke-15s.wav` only covers the 15 s test).
 
-*Last verified: 2026-11-13 — 450-frame test, 20 machines, wall 10:15, QA all-green (run 43366515481).*
+*Last verified: 2026-11-13 — 450-frame test rendered twice end-to-end (runs 43366515481 and
+43369948536, both 450/450 frames, wall ~10:15); delivery bake-off measured: artifact 149 s vs
+release 23.9 s (SHA256-identical copies), release https://github.com/burhan-ahmd/claude-animated-coldframe/releases/tag/render-43369948536*

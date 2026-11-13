@@ -63,4 +63,4 @@ try {
 if ((Get-Item $Out).Length -ne $size) { throw "final size mismatch" }
 Remove-Item $tmp -Recurse -Force
 $sw.Stop()
-"parallel x$Segments: {0:N1} MB in {1:N1}s = {2:N1} MB/s" -f ($size / 1MB), $sw.Elapsed.TotalSeconds, ($size / 1MB / [math]::Max($sw.Elapsed.TotalSeconds, 0.01))
+"parallel x${Segments}: {0:N1} MB in {1:N1}s = {2:N1} MB/s" -f ($size / 1MB), $sw.Elapsed.TotalSeconds, ($size / 1MB / [math]::Max($sw.Elapsed.TotalSeconds, 0.01))
