@@ -58,7 +58,9 @@ export class Tram {
       for (const z of [-1.6, 1.6]) {                       // doorways
         const d = new THREE.Mesh(new THREE.PlaneGeometry(0.90, 1.45), new THREE.MeshBasicMaterial({ color: "#120e0b", fog: true }));
         d.rotation.y = s * Math.PI / 2; d.position.set(s * (HX + 0.008), FLOOR + 0.725, z); B.add(d);
-        const g = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.34), new THREE.MeshBasicMaterial({ color: new THREE.Color(GLOW.tramInterior, 0.9, 0.72).multiplyScalar(0.28), fog: true, transparent: true, opacity: 0.85 }));
+        // warm glow from the car's interior beyond the opening. NOT THREE.Color(GLOW.tramInterior, .9, .72):
+        // that reads (2.9, 0.9, 0.72) — a red-hot salmon that tone-maps to a pink sticky-note on the side panel.
+        const g = new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.34), new THREE.MeshBasicMaterial({ color: new THREE.Color(GLOW.lampWarm).multiplyScalar(0.9), fog: true, transparent: true, opacity: 0.85 }));
         g.rotation.y = s * Math.PI / 2; g.position.set(s * (HX + 0.010), FLOOR + 1.32, z); B.add(g);
         const step = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.07, 0.96), dark);
         step.position.set(s * (HX + 0.14), FLOOR - 0.05, z); B.add(step);

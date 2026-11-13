@@ -36,24 +36,31 @@ export const XFADE: Array<{ at: number; n: number }> = [{ at: 150, n: 6 }, { at:
 export const KICKS: Array<{ f: number; amp: number; dec: number }> = [
   { f: 92, amp: 0.055, dec: 7 },   // the brake shoes bite
   { f: 204, amp: 0.016, dec: 5 },  // the paper boat touches the water
-  { f: 352, amp: 0.02, dec: 6 },   // the boy's boot lands on the step
+  { f: 352, amp: 0.02, dec: 6 },   // his boot lands in the flooded gutter, off the kerb
   { f: 405, amp: 0.03, dec: 7 },   // departure bell, the controller handle slams over
 ];
 
 // ---------------------------------------------------------------- actors (the contract cast.ts poses against)
 export const BOY_KERB = new THREE.Vector3(4.3, 0, -1.6);
-/** The boy: at the kerb until he crosses the flooded gutter to board at his doorway (~f = 386). */
+/** The boy: at the kerb until he crosses the flooded gutter to the place the tram's doorway stood (~f = 388).
+ *  Deliberately NO step-up: the tram has already pulled away when he gets there, so there is no step to stand
+ *  on — he walks out onto the road and stops where the car was. (An 0.44 m lift here left him hovering on a
+ *  phantom step, which read as a bug in the render.) */
 export function boyPos(f: number): THREE.Vector3 {
   const t = smootherstep(338, 388, f);
-  const step = smoothstep(370, 388, f);
-  return new THREE.Vector3(lerp(4.3, 1.62, t), 0.44 * step + 0.18 * Math.max(0, Math.sin(sat((f - 352) / 34) * Math.PI)) * step, lerp(-1.6, -3.62, t));
+  // a small footfall bob while he walks, nothing more
+  const bob = 0.022 * Math.abs(Math.sin(((f - 338) / 50) * Math.PI * 3)) * smoothstep(338, 352, f) * (1 - smoothstep(382, 392, f));
+  return new THREE.Vector3(lerp(4.3, 1.62, t), bob, lerp(-1.6, -3.62, t));
 }
 /** The boy's crouch/launch window: he kneels at the kerb and sets the boat on the flood. */
 export const crouchAmt = (f: number) => smoothstep(190, 200, f) * (1 - smoothstep(206, 216, f));
-/** The lady with the umbrella: crosses the flood left-to-right across shots 3 and 5, at z = -9.5. */
+/** The lady with the umbrella: crosses the flood left-to-right, timing locked to the soundtrack's L->R
+ *  footstep pan (bar 150). Her lane is z = -8.0, 1.75 m clear of the stopped tram's far end, and she starts
+ *  mid-road (x = 0.5) rather than behind the car — at x = -3.75, z = -9.5 she spent her whole walk out of
+ *  frame or hidden behind the tram body, which made a fully drawn character invisible. */
 export function ladyPos(f: number): THREE.Vector3 {
   const t = smootherstep(150, 344, f);
-  return new THREE.Vector3(lerp(-3.75, 4.35, t), 0, -9.5 + 0.5 * Math.sin(t * 3.1));
+  return new THREE.Vector3(lerp(0.5, 4.4, t), 0, -8.0 + 0.4 * Math.sin(t * 3.1));
 }
 /** The paper boat: set down at f = 204, then drifting slowly out into the flooded road for the rest of the film.
  *  It is the last thing on screen, so its drift is small but never stops. */
@@ -113,8 +120,11 @@ const DOF: Array<{ cInf: number; focus?: (f: number) => [number, number, number]
   { cInf: 8.0, focus: (f) => [0.4, 1.5, tramZ(f) + 4.0] },          // 2 the arriving tram's lit end
   { cInf: 11.0, focus: () => [4.3, 1.02, -1.6] },                   // 3 the boy
   { cInf: 18.0, focus: (f) => [boatPos(f).x, 0.1, boatPos(f).z] },  // 4 the boat
-  { cInf: 12.0, focus: (f) => [1.45, 1.3, doorWorldZ(f)] },          // 5 the doorway
-  { cInf: 6.0, focus: (f) => [0, 1.55, tramZ(f) + 4.2] },            // 6 the receding tram
+  // 5 the boy, NOT the doorway: doorWorldZ(f) tracks a tram that left at f = 300, so focusing there put the
+  //   shot's 23 m of softness on empty street and turned the boy 3.6 m away into an unreadable smear.
+  { cInf: 10.0, focus: (f) => [boyPos(f).x, 0.95, boyPos(f).z] },
+  // 6 deep enough to read both ends of the story: the boy 7.5 m out and the tram 40-58 m down the street
+  { cInf: 5.5, focus: () => [2.6, 1.7, -7.9] },
 ];
 
 /** Night grade: the fitted reference curve family (grade.ts) re-fit for a rain-night key. Darks are pressed to

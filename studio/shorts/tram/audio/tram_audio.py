@@ -577,6 +577,7 @@ def build():
     th = lp(th, 850, 2)
     put(out, nrm_p(th, -16.0), fr(120) - 0.6, 1.0, -0.25)
     place(send, nrm_p(th, -16.0) * 0.9, fr(120) - 0.6)
+    note("event", 120, "thunder", "one distant thunder roll, well behind the buildings (frame 120)")
 
     # ---------------------------------------------------------- 150-344 the lady crosses
     r = rng_for("lady")

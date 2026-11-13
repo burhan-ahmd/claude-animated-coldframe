@@ -24,6 +24,7 @@ SFX + ambience only - no music, no voiceover. Frames are 30 fps, so frame/30 = s
 | 96 | 3.200 | bed | `flood_lap` | flood water lapping at the kerb (96-300) |
 | 110 | 3.667 | event | `tram_drips` | water dripping off the tram into the flood |
 | 120 | 4.000 | event | `elec_tick` | slow electrical tick from the controller |
+| 120 | 4.000 | event | `thunder` | one distant thunder roll, well behind the buildings (frame 120) |
 | 150 | 5.000 | event | `lady_steps` | the lady crossing the flooded road L->R: footfalls in 4-6 cm of water + umbrella drips (150-344) |
 | 176 | 5.867 | event | `boy_kerb` | the boy at the kerb: small quick footsteps on wet stone, paper rustle |
 | 196 | 6.533 | event | `boat_set_down` | the paper boat set on the water: soft plip + small splash (196-205) |

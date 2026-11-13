@@ -352,7 +352,8 @@ export class Cast {
       const t = crouchAmt(f);
       const bi = Cast.idx(t, POSE.boy);
       const P = boyPos(f);
-      const near = clamp(1.15 - 0.12 * t, 0, 1.4);
+      // 1.02, not 1.15: at 3.6-5 m he was the hottest thing in a night scene and read as a sticker
+      const near = clamp(1.02 - 0.10 * t, 0, 1.3);
       const out = new THREE.Vector3(P.x, 0.02, P.z);
       place(this.boy[bi], out.x, out.y, out.z, 1, [near * flick, near * 0.97 * flick, near * 0.92 * flick]);
     }
