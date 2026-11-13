@@ -1,5 +1,10 @@
 # Claude Animated Shorts: ready to run
 
+> **New video? The AI agent must read [`INSTRUCTIONS.md`](INSTRUCTIONS.md) first** — it is the complete
+> operating manual for this repo: the cloud-only rendering pipeline, the exact commands, the measured
+> speeds, and every problem + solution learned while building it. Always work in this repo folder;
+> every new video is a new folder inside `studio/src/videos/`.
+
 Make 60-second animated story shorts with Claude Code: flat cartoon characters in a colourful 3D world, ink
 outlines, gliding cameras, voice, music and sound effects. Every frame is three.js code rendered by Remotion on
 your own PC. No AI video generator.
@@ -108,14 +113,16 @@ What was added on top of the original project:
   (software WebGL on GPU-less runners), `frame-timeout: 300000` and `chunk-timeout: 120` for the heavy
   three.js scene.
 
-Render in the cloud (from this folder, `gh` authenticated). `--chunks` = parallel machines (1-20);
+Render in the cloud (from this folder, `gh` authenticated). `--chunks` = parallel machines (1-20, use 20);
 public repo = unlimited free minutes:
 
 ```bash
-npx github:Razee4315/coldframe render ColdframeSmokeTest --chunks 8 --name coldframe-smoke-450.mp4
+npx github:Razee4315/coldframe render ColdframeSmokeTest --chunks 20 --name coldframe-smoke-450.mp4
 ```
 
-The finished MP4 lands in `out/cloud/` (or fetch it later with `coldframe download`). Change the
+The finished MP4 lands in `out/cloud/` — and the workflow also publishes it as a GitHub Release asset
+(fast download, no auth, never expires). Measured: 450 frames on 20 machines ≈ **10 min wall**; see
+`INSTRUCTIONS.md` §4–5 for the planning formula and the fast-download bake-off. Change the
 composition id to render something else; `BridgeShort` (the full 2,025-frame film) renders the same way.
 
 Regenerate the smoke-test soundtrack after changing the audio pipeline:
