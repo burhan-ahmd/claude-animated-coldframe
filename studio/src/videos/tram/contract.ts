@@ -69,17 +69,20 @@ export const TRAM = {
 
 /** Tram centre-line position (world z) at frame f.
  *  ARRIVE 0-96 travelling in +Z (leading end = +Z, so the white headlamp faces the camera), braking from
- *  z = -22 to the stop; HOLD 96-300 at the stop; DEPART 300-450 travelling in -Z (the driver has changed
- *  ends: the -Z headlamp lights, the +Z end shows its red tail lamp) accelerating away into the rain.
- *  A terminus reversal, which is exactly what a tram does at the end of the line — and it gives the film
- *  its front-on arrival and its tail-lamp recession for free. */
+ *  z = -22 to the stop; STAND 96-405 at the stop; DEPART 405-450 accelerating away in -Z into the rain.
+ *  The long stand is deliberate and is what the soundtrack was built to (shorts/tram/audio/CUES.md): the
+ *  controller clack at 300 is the driver changing ends, the boy's boot lands on the step at 352, and the
+ *  departure bell rings at 405. An earlier version pulled away at 300, which put the whole boarding — and
+ *  the sound of it — 105 frames behind the picture. */
 export function tramZ(f: number): number {
   const { stopZ } = TRAM;
   if (f <= 96) return lerp(-22, stopZ, easeInQuad(f / 96)); // easeInQuad as seen from the stop = hard braking
-  if (f <= 300) return stopZ;
-  return lerp(stopZ, -58, easeInQuad((f - 300) / 150));
+  if (f <= 405) return stopZ;
+  return lerp(stopZ, -20, easeInQuad((f - 405) / 45));
 }
-/** Which end leads: +1 = the +Z end is the front (arrival), -1 = the -Z end (departure). */
+/** Which end leads: +1 = the +Z end is the front (arrival), -1 = the -Z end (departure). The driver walks
+ *  through and changes ends at f = 300 while the car is still standing, so +Z shows the red tail lamp from
+ *  then on — that is the 300 controller clack, not the departure. */
 export const leadingEnd = (f: number): 1 | -1 => (f <= 300 ? 1 : -1);
 /** Metres travelled since frame 0 (used for exact wheel rotation, so wheels never slip). */
 export const tramDist = (f: number) => tramZ(0) - tramZ(f);

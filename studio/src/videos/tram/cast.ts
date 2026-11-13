@@ -346,9 +346,12 @@ export class Cast {
     };
     const flick = 1 + 0.045 * Math.sin(f * 1.7) + 0.03 * Math.sin(f * 0.53 + 2.1);
 
-    // ---- the boy
+    // ---- the boy: at the kerb, then boarding. He walks in through the doorway over f = 384-392 and his mesh is
+    //      switched off at 393, by which time boyPos has already carried him inside the car body (x < bodySide)
+    //      and the opaque side panel hides him — so the switch-off is invisible. Hiding a card that is still out
+    //      in the street (it used to sit at x = 1.62) made a fully drawn character blink out at the shot's centre.
     for (const c of this.boy) c.mesh.visible = false;
-    {
+    if (f < 393) {
       const t = crouchAmt(f);
       const bi = Cast.idx(t, POSE.boy);
       const P = boyPos(f);
@@ -365,14 +368,19 @@ export class Cast {
       const ph = dist / 0.88;
       place(this.lady[Math.floor(ph) % POSE.lady], P.x, STREET.waterY * 0.4, P.z, 1, [1.0 * flick, 0.95 * flick, 0.9 * flick]);
     }
-    // ---- the conductor: he only exists once the tram has stopped, and he beckons from f = 318
+    // ---- the conductor: one parameter drives BOTH his pose and how far he leans out of the doorway, so his x
+    //      rides with his gesture: he slides out from behind the door from f = 300, beckons fully out, and slides
+    //      back in by 394. A card held at x = 1.39 (outside the panelling) and then switched off at 392 made him
+    //      blink out of the frame; riding the lean, the opaque side panel hides him while he is inside.
     for (const c of this.cond) c.mesh.visible = false;
-    if (f > 286) {
-      const P = conductorPos(f);
-      const b = smoothstep(318, 344, f) * (1 - smoothstep(372, 392, f));
-      const c = this.cond[Cast.idx(b, POSE.cond)];
-      // 0.31 puts his cropped chest edge at the doorway sill, so he reads as leaning out of the opening
-      place(c, P.x, 0.31, P.z, 1, [1.34 * flick, 1.24 * flick, 1.1 * flick]);
+    {
+      const lean = smoothstep(300, 344, f) * (1 - smoothstep(374, 394, f));
+      if (lean > 0.05) {
+        const P = conductorPos(f);
+        const c = this.cond[Cast.idx(lean, POSE.cond)];
+        // 0.31 puts his cropped chest edge at the doorway sill, so he reads as leaning out of the opening
+        place(c, lerp(0.86, P.x, lean), 0.31, P.z, 1, [1.34 * flick, 1.24 * flick, 1.1 * flick]);
+      }
     }
     // ---- the boat
     const B = boatPos(f);

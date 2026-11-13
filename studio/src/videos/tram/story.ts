@@ -42,15 +42,18 @@ export const KICKS: Array<{ f: number; amp: number; dec: number }> = [
 
 // ---------------------------------------------------------------- actors (the contract cast.ts poses against)
 export const BOY_KERB = new THREE.Vector3(4.3, 0, -1.6);
-/** The boy: at the kerb until he crosses the flooded gutter to the place the tram's doorway stood (~f = 388).
- *  Deliberately NO step-up: the tram has already pulled away when he gets there, so there is no step to stand
- *  on — he walks out onto the road and stops where the car was. (An 0.44 m lift here left him hovering on a
- *  phantom step, which read as a bug in the render.) */
+/** The boy: at the kerb, then across the flooded gutter, then one step in through the doorway (f = 384-392).
+ *  Deliberately NO step-up: the tram pulled up with its doorway here, so the last half-metre of his walk takes
+ *  him INSIDE the car body — which matters, because a card left outside x = TRAM.bodySide is in front of the
+ *  side panel and would blink out of the frame when his card is hidden at f = 393. Inside, the panel hides him
+ *  first and the hide is invisible. (An 0.44 m lift here left him hovering on a phantom step; a card left at
+ *  x = 1.62 left him popping out of existence at the shot's centre.) */
 export function boyPos(f: number): THREE.Vector3 {
-  const t = smootherstep(338, 388, f);
+  const t = smootherstep(338, 384, f);   // kerb -> the doorway
+  const step = smoothstep(384, 392, f);  // and through it, to x = 0.95: inside the panelling
   // a small footfall bob while he walks, nothing more
-  const bob = 0.022 * Math.abs(Math.sin(((f - 338) / 50) * Math.PI * 3)) * smoothstep(338, 352, f) * (1 - smoothstep(382, 392, f));
-  return new THREE.Vector3(lerp(4.3, 1.62, t), bob, lerp(-1.6, -3.62, t));
+  const bob = 0.022 * Math.abs(Math.sin(((f - 338) / 50) * Math.PI * 3)) * smoothstep(338, 352, f) * (1 - smoothstep(378, 388, f));
+  return new THREE.Vector3(lerp(lerp(4.3, 1.62, t), 0.95, step), bob, lerp(-1.6, -3.62, t));
 }
 /** The boy's crouch/launch window: he kneels at the kerb and sets the boat on the flood. */
 export const crouchAmt = (f: number) => smoothstep(190, 200, f) * (1 - smoothstep(206, 216, f));
@@ -108,12 +111,13 @@ const CAMS: Key[][] = [
     { f: 368, pos: [4.86, 1.74, 0.25], look: [1.9, 1.28, -3.3], fov: 43.2, roll: -0.4 },
     { f: 405, pos: [4.8, 1.7, -0.05], look: [1.86, 1.26, -3.35], fov: 42.4, roll: -0.2 },
   ],
-  [ // 6 — the tram recedes into the rain. Pulled back and off the tram's line so one frame holds all three:
-    //     the boy at the frame's left edge (watching it go), the boat bobbing near the lens, the car small and
-    //     red-lamped down the street. The old key at x=5.3 put the boy at ndc -1.44 (out of frame) and left
-    //     only the car — checked with scripts/probe2.ts rather than another render.
-    { f: 405, pos: [4.15, 1.72, 5.6], look: [0.75, 1.2, -16], fov: 34.0, roll: 0.8 },
-    { f: 450, pos: [4.05, 1.78, 5.85], look: [0.65, 1.16, -16.4], fov: 33.6, roll: 0.5 },
+  [ // 6 — the departure, seen from the street's own axis 17 m up the line. One-point perspective: the car's
+    //     whole rear face (tail lamp lit) sits in frame at the cut and shrinks toward the vanishing point, with
+    //     the abandoned paper boat and the lady who crossed holding the right of frame. The car must be
+    //     PROMINENT at f=405 — it only pulls away on that frame, so a camera set for a tram already in the
+    //     distance (the old keys) pointed at empty street. Chosen with scripts/probe3.ts.
+    { f: 405, pos: [1.05, 1.86, 15.0], look: [0.95, 1.14, -9.0], fov: 38.0, roll: -0.2 },
+    { f: 450, pos: [1.0, 1.9, 15.25], look: [0.92, 1.13, -9.3], fov: 37.6, roll: -0.1 },
   ],
 ];
 
@@ -126,9 +130,10 @@ const DOF: Array<{ cInf: number; focus?: (f: number) => [number, number, number]
   // 5 the boy, NOT the doorway: doorWorldZ(f) tracks a tram that left at f = 300, so focusing there put the
   //   shot's 23 m of softness on empty street and turned the boy 3.6 m away into an unreadable smear.
   { cInf: 10.0, focus: (f) => [boyPos(f).x, 0.95, boyPos(f).z] },
-  // 6 focus on the boy: that keeps him and the boat (9-10 m) crisp and lets the tram soften as it recedes
-  //   (cInf 7 -> about 5 px of CoC at 50 m, which reads as rain haze rather than blur)
-  { cInf: 7.0, focus: (f) => [boyPos(f).x, 0.95, boyPos(f).z] },
+  // 6 focus ~11 m ahead of the cut camera and let the car soften as it recedes: it is crisp at the cut
+  //   (13 m, ~1 px), about 4 px out at 30 m by f=450, which reads as rain haze, and the near water keeps
+  //   just enough definition for the lamp reflections.
+  { cInf: 6.5, focus: () => [1.05, 1.2, 4.0] },
 ];
 
 /** Night grade: the fitted reference curve family (grade.ts) re-fit for a rain-night key. Darks are pressed to
