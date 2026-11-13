@@ -9,6 +9,8 @@ studio/shorts/*/audio/_cache/
 references/frames/
 references/sheets/
 # render output, voice and audio stems are big; keep scripts only
+__pycache__/
+*.pyc
 studio/shorts/*/voice/*.wav
 studio/shorts/*/audio/*.wav
 studio/shorts/*/audio/stems/
