@@ -60,3 +60,35 @@ jobs:
       chunk-timeout: 120
       # lower this to let more machines in: coldframe caps chunks at floor(frames / min-frames-per-chunk)
       min-frames-per-chunk: ${{ fromJSON(inputs.min-frames-per-chunk) }}
+
+  # Fast delivery: publishes the finished MP4 as a GitHub Release asset.
+  # Artifacts are slow to download and expire after 90 days; release assets sit on a CDN,
+  # need no auth on a public repo, and never expire. Failure here never breaks the render.
+  fast-download:
+    name: Publish MP4 as release asset
+    needs: render
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    permissions:
+      contents: write
+    steps:
+      - name: Attach the finished MP4 to a GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN="${{ github.run_id }}"
+          REPO="${{ github.repository }}"
+          # coldframe names chunk artifacts "coldframe-part-XX" and the bundle "coldframe-bundle";
+          # whatever does not match those is the stitched final MP4.
+          NAME=$(gh api "repos/$REPO/actions/runs/$RUN/artifacts" --paginate \
+            --jq '.artifacts[] | select(.name | test("part-[0-9]+$|bundle$") | not) | .name' | head -n1)
+          echo "Final artifact: $NAME"
+          gh run download "$RUN" --repo "$REPO" --name "$NAME" --dir dl
+          FILE=$(find dl -type f -name "*.mp4" | head -n1)
+          [ -n "$FILE" ] || { echo "No MP4 found in artifact $NAME"; exit 1; }
+          TAG="render-$RUN"
+          gh release create "$TAG" "$FILE" --repo "$REPO" \
+            --title "Render $RUN" --notes "$NAME (run $RUN)" --clobber \
+            || gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+          echo "Fast download: https://github.com/$REPO/releases/tag/$TAG"
