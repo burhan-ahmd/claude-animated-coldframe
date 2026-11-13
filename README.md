@@ -108,10 +108,11 @@ What was added on top of the original project:
   (software WebGL on GPU-less runners), `frame-timeout: 300000` and `chunk-timeout: 120` for the heavy
   three.js scene.
 
-Render in the cloud (from this folder, `gh` authenticated):
+Render in the cloud (from this folder, `gh` authenticated). `--chunks` = parallel machines (1-20);
+public repo = unlimited free minutes:
 
 ```bash
-npx github:Razee4315/coldframe render ColdframeSmokeTest --chunks 2 --name coldframe-smoke-450.mp4
+npx github:Razee4315/coldframe render ColdframeSmokeTest --chunks 8 --name coldframe-smoke-450.mp4
 ```
 
 The finished MP4 lands in `out/cloud/` (or fetch it later with `coldframe download`). Change the

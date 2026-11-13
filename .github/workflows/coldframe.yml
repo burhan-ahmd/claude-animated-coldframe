@@ -18,7 +18,10 @@ on:
         default: ColdframeSmokeTest
       chunks:
         description: Parallel machines (1-20)
-        default: "2"
+        default: "8"
+      min-frames-per-chunk:
+        description: Smallest allowed chunk (lower = more machines usable)
+        default: "20"
       props:
         description: Input props (JSON)
         default: "{}"
@@ -55,5 +58,5 @@ jobs:
       frame-timeout: 300000
       # a stuck chunk must not burn hours of minutes
       chunk-timeout: 120
-      # 450-frame test: two chunks of 225 frames; never make a chunk shorter than 60 frames
-      min-frames-per-chunk: 60
+      # lower this to let more machines in: coldframe caps chunks at floor(frames / min-frames-per-chunk)
+      min-frames-per-chunk: ${{ fromJSON(inputs.min-frames-per-chunk) }}
