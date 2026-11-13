@@ -36,24 +36,29 @@ export const XFADE: Array<{ at: number; n: number }> = [{ at: 150, n: 6 }, { at:
 export const KICKS: Array<{ f: number; amp: number; dec: number }> = [
   { f: 92, amp: 0.055, dec: 7 },   // the brake shoes bite
   { f: 204, amp: 0.016, dec: 5 },  // the paper boat touches the water
-  { f: 352, amp: 0.02, dec: 6 },   // his boot lands in the flooded gutter, off the kerb
+  { f: 352, amp: 0.02, dec: 6 },   // his boot lands on the car's step (the metal thud in `boy_boards`)
   { f: 405, amp: 0.03, dec: 7 },   // departure bell, the controller handle slams over
 ];
 
 // ---------------------------------------------------------------- actors (the contract cast.ts poses against)
 export const BOY_KERB = new THREE.Vector3(4.3, 0, -1.6);
-/** The boy: at the kerb, then across the flooded gutter, then one step in through the doorway (f = 384-392).
- *  Deliberately NO step-up: the tram pulled up with its doorway here, so the last half-metre of his walk takes
- *  him INSIDE the car body — which matters, because a card left outside x = TRAM.bodySide is in front of the
- *  side panel and would blink out of the frame when his card is hidden at f = 393. Inside, the panel hides him
- *  first and the hide is invisible. (An 0.44 m lift here left him hovering on a phantom step; a card left at
- *  x = 1.62 left him popping out of existence at the shot's centre.) */
+/** The boy: at the kerb letting the boat go, then across to the tram, then up and in.
+ *  The timing is set by the soundtrack (shorts/tram/audio/CUES.md): `boy_boards` is "boots through the flood,
+ *  hollow metal thud on the step (352), handrail grasp, weight on the step", so his walk has to END on the
+ *  doorway at f = 352 and the metal thud has to land while his boot is on it. An earlier version dawdled from
+ *  338 to 388 and reached the step a full second after the sound.
+ *  Deliberately NO tall step-up: a 0.44 m lift read as him hovering on a phantom step. He lifts 0.30 m, which
+ *  is the height of the car's step line, and he lifts it as he arrives. The last half-metre of the walk takes
+ *  him INSIDE the car body — which matters, because a card left outside x = TRAM.bodySide sits in front of the
+ *  opaque side panel and would blink out of the frame when his card is switched off. Inside, the panel hides
+ *  him first and the switch-off is invisible. */
 export function boyPos(f: number): THREE.Vector3 {
-  const t = smootherstep(338, 384, f);   // kerb -> the doorway
-  const step = smoothstep(384, 392, f);  // and through it, to x = 0.95: inside the panelling
-  // a small footfall bob while he walks, nothing more
-  const bob = 0.022 * Math.abs(Math.sin(((f - 338) / 50) * Math.PI * 3)) * smoothstep(338, 352, f) * (1 - smoothstep(378, 388, f));
-  return new THREE.Vector3(lerp(lerp(4.3, 1.62, t), 0.95, step), bob, lerp(-1.6, -3.62, t));
+  const t = smootherstep(324, 352, f);     // kerb -> the doorway, arriving on the metal thud
+  const step = smoothstep(356, 372, f);    // then through it, to x = 0.95: behind the panelling
+  const up = 0.30 * smoothstep(350, 358, f); // and up onto the step itself
+  // a small footfall bob while he comes
+  const bob = 0.026 * Math.abs(Math.sin(((f - 324) / 28) * Math.PI * 3)) * smoothstep(324, 336, f) * (1 - smoothstep(346, 356, f));
+  return new THREE.Vector3(lerp(lerp(4.3, 1.62, t), 0.95, step), up + bob, lerp(-1.6, -3.62, t));
 }
 /** The boy's crouch/launch window: he kneels at the kerb and sets the boat on the flood. */
 export const crouchAmt = (f: number) => smoothstep(190, 200, f) * (1 - smoothstep(206, 216, f));

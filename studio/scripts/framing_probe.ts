@@ -41,7 +41,7 @@ const who: Array<[string, (f: number) => THREE.Vector3, number]> = [
 ];
 
 console.log(`frame  shot  actor  inFrame  ndc(x,y)          dist   CoCpx  behindTram`);
-for (const f of [0, 30, 53, 100, 150, 180, 205, 230, 248, 290, 330, 360, 388, 405, 430, 449]) {
+for (const f of [0, 30, 53, 100, 150, 180, 205, 230, 248, 290, 324, 330, 340, 348, 352, 358, 364, 370, 376, 388, 405, 430, 449]) {
   const shot = SHOTS.find((s) => f >= s.a && f < s.b)?.id ?? 6;
   for (const [name, at, _h] of who) {
     const p = at(f);

@@ -346,12 +346,12 @@ export class Cast {
     };
     const flick = 1 + 0.045 * Math.sin(f * 1.7) + 0.03 * Math.sin(f * 0.53 + 2.1);
 
-    // ---- the boy: at the kerb, then boarding. He walks in through the doorway over f = 384-392 and his mesh is
-    //      switched off at 393, by which time boyPos has already carried him inside the car body (x < bodySide)
+    // ---- the boy: at the kerb, then boarding. He walks in through the doorway over f = 356-372 and his mesh is
+    //      switched off at 374, by which time boyPos has already carried him inside the car body (x < bodySide)
     //      and the opaque side panel hides him — so the switch-off is invisible. Hiding a card that is still out
-    //      in the street (it used to sit at x = 1.62) made a fully drawn character blink out at the shot's centre.
+    //      in the street made a fully drawn character blink out at the shot's centre.
     for (const c of this.boy) c.mesh.visible = false;
-    if (f < 393) {
+    if (f < 374) {
       const t = crouchAmt(f);
       const bi = Cast.idx(t, POSE.boy);
       const P = boyPos(f);
