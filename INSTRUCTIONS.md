@@ -1,0 +1,331 @@
+# INSTRUCTIONS.md — Cloud Animation Pipeline
+
+**Read this file top-to-bottom before doing anything.** It is the complete operating manual for
+producing a finished vertical animated video (1080×1920, 30 fps, MP4 with soundtrack) from a
+topic, a script, or a voiceover + SRT — using **only cloud rendering on GitHub Actions** with
+up to 20 parallel machines at zero cost.
+
+> One public repo renders every video: **https://github.com/burhan-ahmd/claude-animated-coldframe**
+> (branch `main`). Local machine only authors files and downloads results — it never renders.
+
+---
+
+## 0. GOLDEN RULES (violating these wastes hours)
+
+1. **NEVER render or test frames locally.** The local machine has NO GPU (~17 s/frame in
+   software vs ~7.8 s/frame average on GitHub's runners × 20 machines). All rendering and all
+   frame testing happens in the cloud. Local work = authoring files, running the asset check,
+   and QA-ing the downloaded MP4.
+2. **One public repo for everything.** Public repo = **unlimited free Actions minutes** and every
+   machine bills nothing. Private would burn the 2,000 min/month quota fast (a 20-machine render
+   uses ~100–2,200 machine-minutes). Never make it private.
+3. **Verify before claiming success.** Never say "done" until the MP4 is downloaded, ffprobe-verified
+   (frame count exact) and QA has been run and eyeballed.
+4. **No secrets in the repo.** Never commit `.env`, API keys, or tokens. Default to the repo's own
+   synthesized audio stems (CC0) — upload a personal voiceover only if the user explicitly provides
+   it for that video.
+5. **The workflow file must be on `main`** before dispatching (`workflow_dispatch` only reads the
+   default branch).
+6. **Assets are checked BEFORE any render machine starts** — the `verify-assets` job gates the
+   render. If it fails, fix assets; do not retry the render.
+7. **The repo is a platform, not a one-off.** Every new video = new composition folder + assets in
+   the same repo. `git push` to `main`, dispatch, done.
+
+---
+
+## 1. WHAT EXISTS (repo layout)
+
+Local working copy: `E:\2026\EssouliAnas_animation_coldframe\render-repo\claude-animated-coldframe\`
+Upstream references (read-only, do not modify): `E:\2026\EssouliAnas_animation_coldframe\repos\` contains pristine clones of `claude-animated-shorts` (the animation source) and `coldframe` (the render engine).
+
+```
+claude-animated-coldframe/               ← the one public repo
+├── INSTRUCTIONS.md                      ← this file
+├── README.md                            ← quick-start
+├── .github/workflows/coldframe.yml      ← THE render workflow (dispatch with knobs)
+├── setup.ps1                            ← one-time local setup (npm + Kenney models)
+└── studio/                              ← the Remotion + three.js project
+    ├── package.json
+    ├── src/Root.tsx                     ← register every composition here
+    ├── src/videos/                      ← compositions, one folder per video topic
+    │   └── bridge/                      ← example: SmokeTest.tsx (450f), BridgeShort.tsx (2025f)
+    ├── public/                          ← static assets, COMMITTED so every cloud machine sees them
+    │   ├── bridge/kenney/               ← 26 CC0 GLB models + Textures/colormap.png
+    │   └── audio/                       ← soundtracks (e.g. smoke-15s.wav, 15.000 s verified)
+    ├── shorts/<topic>/audio/            ← Python audio generators (music.py, sfx.py, smoke_audio.py)
+    └── scripts/
+        ├── check-assets.mjs             ← asset gate (every referenced GLB + audio must exist)
+        └── short_qa.py                  ← frame-by-frame QA of a downloaded MP4
+```
+
+Outputs land locally (gitignored, never committed):
+`E:\2026\EssouliAnas_animation_coldframe\out\cloud\` (MP4s) and `out\qa\` (QA sheets).
+
+---
+
+## 2. PREREQUISITES (check once, per machine)
+
+- `gh` CLI authenticated with `repo` + `workflow` scopes → `gh auth status`
+- `git` identity set → `git config user.name` / `user.email` must be non-empty
+- Node 22 (`node -v`) — needed for `check-assets.mjs`
+- Python 3 with `numpy` + `Pillow` — needed for `short_qa.py`
+- `ffmpeg` on PATH (any build ≥ 4.x) — used by QA. **Do NOT use Remotion's bundled
+  `node_modules/@remotion/compositor-win32-x64-msvc/ffmpeg.exe` for QA — it is a minimal build
+  (no `rawvideo` muxer, no `ebur128`).** Its `ffprobe.exe` IS fine for probing.
+- If ever needed locally: `$env:REMOTION_TMP = "C:/remotion-tmp"` (only D: drive space is scarce).
+
+---
+
+## 3. THE NEW-VIDEO WORKFLOW (topic / script / voiceover → finished MP4)
+
+Total realistic time budget: **15–45 min end-to-end**, almost all of it cloud time (which is free).
+
+### Step 1 — Update the working copy
+```powershell
+cd E:\2026\EssouliAnas_animation_coldframe\render-repo\claude-animated-coldframe
+git pull origin main
+```
+
+### Step 2 — Turn the input into a shot plan
+Timing is everything. **30 fps: `frame = round(seconds × 30)`; 1 s of video = 30 frames.**
+- **Topic only:** write the script first. Narration at ~2.4 words/s → a 15 s short ≈ 36 words,
+  a 60 s short ≈ 145 words. Split the script into shots of 3–5 s (90–150 frames) each. Write a
+  shot map JSON (see Step 6) with `{id, a, b}` frame ranges.
+- **Script provided:** same, but the shot text is already fixed — just assign frame ranges.
+- **Voiceover + SRT provided:** timing comes FROM the SRT. `shot start = ceil(SRT start × 30)`,
+  `shot end = ceil(SRT end × 30)`. Total composition frames = `ceil(last SRT end × 30) + 30`
+  (breathing room). The voice WAV becomes the master clock — the video length follows it.
+
+### Step 3 — Create the composition
+- New folder `studio/src/videos/<topic>/` with `<Name>.tsx`.
+- **Copy the structure of `studio/src/videos/bridge/SmokeTest.tsx`** — it is the minimal known-good
+  pattern: a full three.js scene + `<Audio src={staticFile("audio/<your>.wav")} />` wrapper.
+  `BridgeShort.tsx` in the same folder shows the full-film pattern (camera glides, shot system).
+- Read frames with `useCurrentFrame()`; absolute timing only, no randomness without a seeded PRNG
+  (chunk machines must produce identical frames for the same frame number — they re-bundle the
+  same code, but any `Math.random()` non-determinism shows as chunk-boundary glitches).
+- Register in `studio/src/Root.tsx`:
+  ```tsx
+  <Composition id="YourVideo" component={YourVideo} durationInFrames={N} fps={30} width={1080} height={1920} />
+  ```
+- `id` must be unique per video; this id is what you pass to the render.
+
+### Step 4 — Models
+- Reuse the committed CC0 kit: `studio/public/bridge/kenney/` (26 GLBs + `Textures/colormap.png`).
+- New models (only if the story needs them): download CC0 GLBs into
+  `studio/public/<topic>/models/` and **commit them** (cloud machines check out the repo —
+  nothing can be downloaded at render time).
+- **Warning:** `loadKit()` silently DROPS missing model files (per-model `.catch`). A missing
+  model = a scene silently missing objects. This is why the asset gate and visual QA exist.
+
+### Step 5 — Audio
+- **No voiceover (topic/script mode):** follow the pattern in
+  `studio/shorts/bridge/audio/smoke_audio.py` — select stems from the repo's `music.py`/`sfx.py`
+  generators, slice to the exact video duration, master to **−16 LUFS integrated / −2.2 dBTP /
+  48 kHz stereo 24-bit WAV**, write to `studio/public/audio/<video>.wav`. Verify with ffprobe
+  (`duration` must match the composition exactly).
+- **Voiceover provided:** put the WAV/MP3 at `studio/public/audio/voice.<ext>`, add `<Audio src={staticFile("audio/voice.<ext>")} />` as the master track, and mix a music bed well under it
+  (music ≈ −30 LUFS short-term under speech). **This mode is not yet exercised end-to-end —
+  run a full cloud render + QA on the first voiceover video before trusting it.**
+- Never use `Math.random()` for note placement (see Step 3 determinism rule).
+
+### Step 6 — Write the QA shot map
+Create `out/qa/<video>_shots.json` (this drives `short_qa.py`):
+```json
+{"shots": [{"id": 1, "a": 0, "b": 130}, {"id": 2, "a": 130, "b": 283}],
+ "flash": [130, 134], "xfade": []}
+```
+`flash` / `xfade` ranges are planned effects that QA must ignore when flagging white/black frames.
+
+### Step 7 — Asset gate (local, fast, mandatory)
+```powershell
+cd studio; node scripts/check-assets.mjs
+```
+It verifies every GLB/audio path referenced by the composition exists. CI runs it again as the
+`verify-assets` job; the render never starts if it fails. Fix errors here, not in the cloud.
+
+### Step 8 — Commit + push (one repo, every video)
+```powershell
+git add -A
+git status   # EYEBALL: no .env, no _cache/, no keys, no files you can't justify
+git commit -m "Add <video>: composition + audio + shot map"
+git push origin main
+```
+
+### Step 9 — Render in the cloud (the ONLY place rendering happens)
+**Full render (recommended default — a 15 s video costs ~10 min wall, free):**
+```powershell
+npx github:Razee4315/coldframe render YourVideo --chunks 20 --name your-video.mp4
+```
+**Equivalent workflow dispatch (works from any folder, good for scripts):**
+```powershell
+gh workflow run coldframe.yml --repo burhan-ahmd/claude-animated-coldframe --ref main `
+  -f composition=YourVideo -f chunks=20 -f min-frames-per-chunk=20 `
+  -f output-name=your-video.mp4
+$run = gh run list --repo burhan-ahmd/claude-animated-coldframe --limit 1 --json databaseId --jq ".[0].databaseId"
+```
+- `--chunks` = parallel machines (max **20**). For videos < 400 frames, fewer machines are
+  auto-used because of the chunk-size floor (see §4).
+- **New/unknown composition?** Do a cloud smoke first: render it fully if ≤ 450 frames, or
+  (longer video) create a short `<Name>Test` variant comp of the first ~90 frames and render
+  that. **Never smoke-test locally.**
+
+### Step 10 — Monitor
+```powershell
+gh run watch $run --repo burhan-ahmd/claude-animated-coldframe --interval 15 --exit-status
+```
+Run this in the BACKGROUND and continue other work — you get notified at completion.
+- **Live view while running = the web UI only** (status dots auto-refresh):
+  `https://github.com/burhan-ahmd/claude-animated-coldframe/actions/runs/<run-id>`
+- **Per-frame logs are NOT readable via API while a job runs** (the endpoint returns
+  `BlobNotFound`). They become fetchable the moment each job completes:
+  `gh run view $run --job <jobId> --log` or `gh api repos/.../actions/jobs/<jobId>/logs`.
+
+### Step 11 — Download FAST (see §5 for why/how)
+The moment the run succeeds, background this (never block on it):
+```powershell
+gh run download $run --repo burhan-ahmd/claude-animated-coldframe `
+  --name your-video --dir E:\2026\EssouliAnas_animation_coldframe\out\cloud
+```
+The workflow ALSO publishes the MP4 as a **GitHub Release asset** (fast CDN, permanent, no auth):
+`https://github.com/burhan-ahmd/claude-animated-coldframe/releases/tag/render-<run-id>`
+— download from there with a plain browser or curl. Pick whichever link is faster that day.
+
+### Step 12 — QA (mandatory before telling the user "done")
+```powershell
+$ws = "E:\2026\EssouliAnas_animation_coldframe"
+$mp4 = "$ws\out\cloud\your-video.mp4"
+ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate,nb_frames:format=duration -of default $mp4
+# expect: 1080x1920, 30/1, nb_frames == composition length, AAC 48 kHz stereo, duration ≈ frames/30
+python studio\scripts\short_qa.py $mp4 "$ws\out\qa" "$ws\out\qa\<video>_shots.json
+```
+Then EYEBALL: (a) the keyframes at every chunk boundary (`b-1`,`b` of each chunk — see §4 for
+boundary math, extract with `ffmpeg -vf "select=eq(n\,224)+eq(n\,225)"`), (b) 2–3 contact sheets
+(`sheet_*.jpg`). Report.md verdict must show no black/white/frozen/unplanned-pop frames.
+Finally: `browser.preview` the MP4 so the user can watch it immediately.
+
+---
+
+## 4. CLOUD RENDERING — HOW IT WORKS + MEASURED NUMBERS
+
+**Engine:** `coldframe` (Razee4315/coldframe@v1, reusable workflow called by our
+`.github/workflows/coldframe.yml`). Pipeline: `Plan` job bundles the project and splits the frame
+range → N chunk machines each render their slice to lossless MKV (h264 + PCM audio, swangle
+software-WebGL, 4 parallel workers per machine) → `Stitch + deliver` concatenates losslessly,
+encodes audio to AAC **once**, verifies the frame count, uploads the artifact — and (since this
+repo's fast-download job) attaches the MP4 to a GitHub Release.
+
+**Knobs that matter:**
+| Knob | Value | Why |
+|---|---|---|
+| `chunks` | ≤ 20 | max parallel machines |
+| `min-frames-per-chunk` | 20 (default) | chunks get capped at `floor(frames ÷ min-frames-per-chunk)`; 450 frames ÷ 20 = 23-frame chunks |
+| `gl` | `swangle` | runners have no GPU; software WebGL, visually identical |
+| `frame-timeout` | `300000` ms | heavy 3D frames (MSAA 4 + ink + DOF + bloom) exceed the 120 s default |
+| `chunk-timeout` | `120` min | a stuck chunk must not burn hours |
+
+**Measured (450-frame test, 20 machines, run 43366515481 — real numbers):**
+- Wall clock dispatch → MP4 artifact: **10 min 15 s** (queue 45 s, Plan 39 s, slowest chunk 9.02 min, stitch+verify 24 s)
+- Per-machine throughput: **avg 7.8 s/frame** (light wide shots 3.4 s, heavy soldier close-ups ~15 s)
+- Setup cost per machine ≈ 2–3 min (checkout, node, Chrome deps, npm install, artifact download)
+- Total machine-time: 104.8 machine-minutes (= free on the public repo)
+- Cloud ≈ **2× faster per frame than the local no-GPU machine** (16.8 s/frame), ×20 machines on top
+
+**Planning formula (minutes):** `wall ≈ 4 + (frames ÷ 20) × perFrameSec ÷ 60`, using `perFrameSec` ≈ 7.8 optimistic → ~15 pessimistic (heaviest content / stragglers).
+- 450 frames → 7–10 min (measured 10:15)
+- 2,025 frames (full film) → **16–30 min**
+- **Wall time is governed by the SLOWEST chunk** (stragglers: chunks 16/18 took 2× the median in
+  the measured run). More machines ≠ linear speedup. For a heavy final render consider
+  `chunks=20, min-frames-per-chunk=10` on videos ≤ 200 frames to balance loads.
+
+**Machine-minute cost:** ≈ `Σ chunk wall time`. 20-machine render of 450 frames ≈ 105 min;
+2,025 frames ≈ 2,200 min. Public repo → $0. Never switch to private for renders.
+
+---
+
+## 5. FAST DOWNLOAD AFTER RENDER (the delivery optimization)
+
+**Problem observed:** `gh run download` of the 35 MB final MP4 took minutes and, run in the
+foreground, blocked everything.
+
+**Fixes (both in place):**
+1. **Always download in the background** the moment the run completes, and do QA prep meanwhile.
+2. **The workflow now publishes every finished MP4 as a GitHub Release asset** (the
+   `fast-download` job in `coldframe.yml`, `needs: render`, `continue-on-error` so it can never
+   break a successful render). Release assets:
+   - download via CDN at browser speeds, no `gh` auth needed,
+   - **never expire** (artifacts auto-delete after 90 days),
+   - work with plain `curl`:
+     ```powershell
+     curl.exe -L -o out\cloud\your-video.mp4 `
+       "https://github.com/burhan-ahmd/claude-animated-coldframe/releases/download/render-<run-id>/<file>.mp4"
+     ```
+3. **Don't download the 20 `coldframe-part-XX` artifacts** — only the final one
+   (`--name <output-name-without-.mp4>`). The parts are only needed to re-stitch manually (never
+   needed so far).
+
+---
+
+## 6. ISSUES FACED → SOLUTIONS (learned the hard way; don't repeat them)
+
+| # | Issue | Solution |
+|---|---|---|
+| 1 | Per-frame logs unavailable while a job runs (`BlobNotFound` from the API) | Live view = web UI only; `gh run watch` in background for completion; fetch logs only after jobs finish |
+| 2 | Remotion's bundled `ffmpeg.exe` failed QA with 0 frames decoded | It's a minimal build (no `rawvideo` muxer, no `ebur128`). Use system ffmpeg for QA; Remotion's `ffprobe.exe` is fine for probing |
+| 3 | Full-res raw frame pipe would be ~2.8 GB (32-bit ffmpeg OOM risk) | `short_qa.py` scales to 180×320 **before** piping (~77 MB) — 32-bit ffmpeg handles it. Never pipe full-res raw frames |
+| 4 | Measuring binary output through PowerShell pipes corrupts it | Never measure binary in PowerShell pipelines; Python `subprocess` is binary-safe |
+| 5 | ffmpeg `select=eq(n,130)` broke in PowerShell | Escape the commas: `select=eq(n\,130)+eq(n\,134)`, avoid single quotes (PS strips them) |
+| 6 | `gh repo edit --visibility public` failed ("accepts at most 1 arg") | Use `--visibility=public --accept-visibility-change-consequences` (= syntax) |
+| 7 | Complex `--jq` filters failed in PowerShell (args split) | Use `--json ... \| ConvertFrom-Json` for complex queries; keep `--jq` to trivial one-liners |
+| 8 | `Get-Date -AsUTC` doesn't exist in this PowerShell | `(Get-Date).ToUniversalTime()` |
+| 9 | `loadKit()` silently drops missing GLBs → scenes missing objects | Asset gate (`check-assets.mjs`) before render + eyeball contact sheets after; never trust a clean exit alone |
+| 10 | 2-machine baseline too slow (~32 min projected) | 20 machines + lowered `min-frames-per-chunk` → measured 10:15. Cancel slow runs early; runs are free on the public repo |
+| 11 | `digest-mismatch: error` line in stitch logs looked fatal | Cosmetic GitHub artifact-download noise. Trust only the explicit `Frames in output: N (expected N)` verification |
+| 12 | Chunk-boundary glitch risk (frame 224/225) | QA extracts boundary keyframes and the pop-detector flags discontinuities — measured run: seamless |
+| 13 | Slow artifact download blocked the pipeline | §5: background download + Release-asset fast path |
+| 14 | Pushing workflow after dispatch does nothing | `workflow_dispatch` reads the default branch AT DISPATCH — commit + push first, then run |
+| 15 | Non-deterministic frames would corrupt chunk stitching | No unseeded randomness in compositions; identical frame number must render identically on any machine |
+| 16 | npm/audio caches accidentally committed | `_cache/` gitignored; eyeball `git status` before every push (golden rule 4) |
+
+---
+
+## 7. COMMAND CHEAT SHEET
+
+```powershell
+# --- setup (once per machine) ---
+cd E:\2026\EssouliAnas_animation_coldframe\render-repo\claude-animated-coldframe
+powershell -File setup.ps1            # npm install + Kenney models into studio/public/bridge/kenney
+
+# --- per video ---
+node studio\scripts\check-assets.mjs  # from studio/: cd studio; node scripts/check-assets.mjs
+git add -A; git commit -m "..."; git push origin main
+npx github:Razee4315/coldframe render <CompId> --chunks 20 --name <video>.mp4
+#   or: gh workflow run coldframe.yml --repo burhan-ahmd/claude-animated-coldframe -f composition=<CompId> -f chunks=20 -f min-frames-per-chunk=20 -f output-name=<video>.mp4
+
+# --- monitor / fetch ---
+gh run watch <runId> --repo burhan-ahmd/claude-animated-coldframe --interval 15 --exit-status
+gh run download <runId> --repo burhan-ahmd/claude-animated-coldframe --name <video> --dir ..\..\out\cloud
+#   fast alt: release asset at https://github.com/burhan-ahmd/claude-animated-coldframe/releases/tag/render-<runId>
+
+# --- QA ---
+ffprobe -v error -show_entries stream=nb_frames,r_frame_rate,width,height:format=duration -of default out\cloud\<video>.mp4
+python studio\scripts\short_qa.py out\cloud\<video>.mp4 out\qa out\qa\<video>_shots.json
+```
+
+---
+
+## 8. HONEST LIMITATIONS & UNTESTED PATHS
+
+- **Voiceover + SRT mode** (§3 Step 5) is specified but not yet exercised end-to-end — validate on
+  the first voiceover video (full cloud render + QA) before trusting it.
+- **The `fast-download` release job** was added to `coldframe.yml` and validated by a 450-frame
+  rerun; if a future run shows the job failing (it is `continue-on-error`), the artifact path in
+  §3 Step 11 still delivers — report it, don't silently ignore it.
+- **Stragglers:** a single heavy shot section can dominate wall time; chunk sizes are uniform, not
+  content-aware.
+- **Remotion Lambda** would be faster still but costs money + AWS — deliberately not used.
+- **Artifacts expire after 90 days**; release assets don't. Keep final MP4s locally under `out\cloud\`.
+- **2025-frame `BridgeShort`** has not been cloud-rendered yet (needs its full soundtrack generated
+  and wired first — `smoke-15s.wav` only covers the 15 s test).
+
+*Last verified: 2026-11-13 — 450-frame test, 20 machines, wall 10:15, QA all-green (run 43366515481).*

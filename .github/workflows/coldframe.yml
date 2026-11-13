@@ -88,7 +88,8 @@ jobs:
           FILE=$(find dl -type f -name "*.mp4" | head -n1)
           [ -n "$FILE" ] || { echo "No MP4 found in artifact $NAME"; exit 1; }
           TAG="render-$RUN"
+          # NOTE: gh release create has no --clobber flag; --clobber belongs to gh release upload.
           gh release create "$TAG" "$FILE" --repo "$REPO" \
-            --title "Render $RUN" --notes "$NAME (run $RUN)" --clobber \
+            --title "Render $RUN" --notes "$NAME (run $RUN)" \
             || gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           echo "Fast download: https://github.com/$REPO/releases/tag/$TAG"
