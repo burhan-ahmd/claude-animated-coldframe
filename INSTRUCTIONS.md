@@ -5,7 +5,7 @@ producing a finished vertical animated video (1080×1920, 30 fps, MP4 with sound
 topic, a script, or a voiceover + SRT — using **only cloud rendering on GitHub Actions** with
 up to 20 parallel machines at zero cost.
 
-> One public repo renders every video: **https://github.com/burhan-ahmd/claude-animated-coldframe**
+> One public repo renders every video: **https://github.com/burhan-ahmd/quiet-mill**
 > (branch `main`). Local machine only authors files and downloads results — it never renders.
 
 ---
@@ -39,7 +39,7 @@ Local working copy: `E:\2026\EssouliAnas_animation_coldframe\render-repo\claude-
 Upstream references (read-only, do not modify): `E:\2026\EssouliAnas_animation_coldframe\repos\` contains pristine clones of `claude-animated-shorts` (the animation source) and `coldframe` (the render engine).
 
 ```
-claude-animated-coldframe/               ← the one public repo
+claude-animated-coldframe/               ← local folder; the public repo is github.com/burhan-ahmd/quiet-mill
 ├── INSTRUCTIONS.md                      ← this file
 ├── README.md                            ← quick-start
 ├── .github/workflows/coldframe.yml      ← THE render workflow (dispatch with knobs)
@@ -160,10 +160,10 @@ npx github:Razee4315/coldframe render YourVideo --chunks 20 --name your-video.mp
 ```
 **Equivalent workflow dispatch (works from any folder, good for scripts):**
 ```powershell
-gh workflow run coldframe.yml --repo burhan-ahmd/claude-animated-coldframe --ref main `
+gh workflow run coldframe.yml --repo burhan-ahmd/quiet-mill --ref main `
   -f composition=YourVideo -f chunks=20 -f min-frames-per-chunk=20 `
   -f output-name=your-video.mp4
-$run = gh run list --repo burhan-ahmd/claude-animated-coldframe --limit 1 --json databaseId --jq ".[0].databaseId"
+$run = gh run list --repo burhan-ahmd/quiet-mill --limit 1 --json databaseId --jq ".[0].databaseId"
 ```
 - `--chunks` = parallel machines (max **20**). For videos < 400 frames, fewer machines are
   auto-used because of the chunk-size floor (see §4).
@@ -173,11 +173,11 @@ $run = gh run list --repo burhan-ahmd/claude-animated-coldframe --limit 1 --json
 
 ### Step 10 — Monitor
 ```powershell
-gh run watch $run --repo burhan-ahmd/claude-animated-coldframe --interval 15 --exit-status
+gh run watch $run --repo burhan-ahmd/quiet-mill --interval 15 --exit-status
 ```
 Run this in the BACKGROUND and continue other work — you get notified at completion.
 - **Live view while running = the web UI only** (status dots auto-refresh):
-  `https://github.com/burhan-ahmd/claude-animated-coldframe/actions/runs/<run-id>`
+  `https://github.com/burhan-ahmd/quiet-mill/actions/runs/<run-id>`
 - **Per-frame logs are NOT readable via API while a job runs** (the endpoint returns
   `BlobNotFound`). They become fetchable the moment each job completes:
   `gh run view $run --job <jobId> --log` or `gh api repos/.../actions/jobs/<jobId>/logs`.
@@ -185,11 +185,11 @@ Run this in the BACKGROUND and continue other work — you get notified at compl
 ### Step 11 — Download FAST (see §5 for why/how)
 The moment the run succeeds, background this (never block on it):
 ```powershell
-gh run download $run --repo burhan-ahmd/claude-animated-coldframe `
+gh run download $run --repo burhan-ahmd/quiet-mill `
   --name your-video --dir E:\2026\EssouliAnas_animation_coldframe\out\cloud
 ```
 The workflow ALSO publishes the MP4 as a **GitHub Release asset** (fast CDN, permanent, no auth):
-`https://github.com/burhan-ahmd/claude-animated-coldframe/releases/tag/render-<run-id>`
+`https://github.com/burhan-ahmd/quiet-mill/releases/tag/render-<run-id>`
 — download from there with a plain browser or curl. Pick whichever link is faster that day.
 
 ### Step 12 — QA (mandatory before telling the user "done")
@@ -260,7 +260,7 @@ foreground, blocked everything.
    `scripts/fastdl.ps1` exists for parallel segments but gave no extra gain on a ~1.4 MB/s line):
    ```powershell
    curl.exe -sL --retry 3 -o "E:\2026\EssouliAnas_animation_coldframe\out\cloud\<file>.mp4" `
-     "https://github.com/burhan-ahmd/claude-animated-coldframe/releases/download/render-<run-id>/<file>.mp4"
+     "https://github.com/burhan-ahmd/quiet-mill/releases/download/render-<run-id>/<file>.mp4"
    ```
    **Measured bake-off (34 MB MP4, run 43369948536):**
    | Path | Time | Speed |
@@ -318,13 +318,13 @@ powershell -File setup.ps1            # npm install + Kenney models into studio/
 node studio\scripts\check-assets.mjs  # from studio/: cd studio; node scripts/check-assets.mjs
 git add -A; git commit -m "..."; git push origin main
 npx github:Razee4315/coldframe render <CompId> --chunks 20 --name <video>.mp4
-#   or: gh workflow run coldframe.yml --repo burhan-ahmd/claude-animated-coldframe -f composition=<CompId> -f chunks=20 -f min-frames-per-chunk=20 -f output-name=<video>.mp4
+#   or: gh workflow run coldframe.yml --repo burhan-ahmd/quiet-mill -f composition=<CompId> -f chunks=20 -f min-frames-per-chunk=20 -f output-name=<video>.mp4
 
 # --- monitor / fetch ---
-gh run watch <runId> --repo burhan-ahmd/claude-animated-coldframe --interval 15 --exit-status
-gh run download <runId> --repo burhan-ahmd/claude-animated-coldframe --name <video> --dir ..\..\out\cloud
+gh run watch <runId> --repo burhan-ahmd/quiet-mill --interval 15 --exit-status
+gh run download <runId> --repo burhan-ahmd/quiet-mill --name <video> --dir ..\..\out\cloud
 #   fast alt: scripts\fastdl.ps1 -Url <release asset URL> -Out ..\..\out\cloud\<video>.mp4
-#   release listing: https://github.com/burhan-ahmd/claude-animated-coldframe/releases
+#   release listing: https://github.com/burhan-ahmd/quiet-mill/releases
 
 # --- QA ---
 ffprobe -v error -show_entries stream=nb_frames,r_frame_rate,width,height:format=duration -of default out\cloud\<video>.mp4
@@ -351,4 +351,4 @@ python studio\scripts\short_qa.py out\cloud\<video>.mp4 out\qa out\qa\<video>_sh
 
 *Last verified: 2026-11-13 — 450-frame test rendered twice end-to-end (runs 43366515481 and
 43369948536, both 450/450 frames, wall ~10:15); delivery bake-off measured: artifact 149 s vs
-release 23.9 s (SHA256-identical copies), release https://github.com/burhan-ahmd/claude-animated-coldframe/releases/tag/render-43369948536*
+release 23.9 s (SHA256-identical copies), release https://github.com/burhan-ahmd/quiet-mill/releases/tag/render-43369948536*

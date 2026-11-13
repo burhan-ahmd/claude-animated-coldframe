@@ -2,7 +2,7 @@
 # Start it from the Actions tab ("Run workflow") or with: coldframe render <CompositionId>
 # The MP4 is attached to the run; `coldframe render` downloads it to out/cloud/.
 #
-# Custom for this repo (EssouliAnas/claude-animated-coldframe): unlike the stock template, the
+# Custom for this repo (burhan-ahmd/quiet-mill): unlike the stock template, the
 # Remotion project lives in studio/, the 3D Kenney models and the committed soundtrack are
 # verified BEFORE any render machine starts, and the WebGL/frame timeouts are raised for this
 # heavy three.js scene rendered in software (swangle) on GitHub's GPU-less runners.
