@@ -4,12 +4,17 @@
 > operating manual for this repo: the cloud-only rendering pipeline, the exact commands, the measured
 > speeds, and every problem + solution learned while building it. Always work in this repo folder;
 > every new video is a new folder inside `studio/src/videos/`.
+>
+> Craft law lives in [`SKILL.md`](SKILL.md) (v2.2): the viral story formula, comedy engine, continuous
+> camera flow (`flow.ts`), safe-area checks (`framing.ts`), word-by-word captions (`Captions.tsx`, locked
+> house style), per-place lighting and the pre-render quality gate. Both self-tests run in CI.
 
 Make 60-second animated story shorts with Claude Code: flat cartoon characters in a colourful 3D world, ink
-outlines, gliding cameras, voice, music and sound effects. Every frame is three.js code rendered by Remotion on
-your own PC. No AI video generator.
+outlines, gliding cameras, voice, music and sound effects. Every frame is three.js code rendered by Remotion —
+in the CLOUD on 20 free GitHub machines for this repo. No AI video generator.
 
-Based on the free skill by **Mr omi** ([mromidev/claude-animated-shorts](https://github.com/mromidev/claude-animated-shorts), MIT).
+Based on the free skill by **Mr omi** ([mromidev/claude-animated-shorts](https://github.com/mromidev/claude-animated-shorts), MIT),
+upgraded to **v2.2** from [alifmahmudashik/shorts-studio-skill](https://github.com/alifmahmudashik/shorts-studio-skill) (MIT).
 This copy adds what you need to run it on the first try: a ready Remotion project, a one-command setup, an
 automatic download of the free 3D models, and fixes for the problems that stop a fresh install.
 

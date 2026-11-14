@@ -26,6 +26,7 @@
     "@types/node": "22.15.3",
     "@types/react": "19.0.0",
     "@types/three": "0.176.0",
+    "tsx": "4.19.4",
     "typescript": "5.8.2"
   }
 }

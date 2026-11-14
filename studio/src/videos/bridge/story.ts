@@ -88,7 +88,8 @@ export const bridgeState = (id: number, t: number): BridgeState => {
 // ---------------- camera ----------------
 // Grammar (motion.md): every move is a symmetric smootherstep glide of 18-40 f (peak speed = 1.875 x distance / dur,
 // so dur >= 0.075 x the move in 720p px keeps the peak near the reference 14-25 px/f); a reframe bigger than about
-// half a frame width or 40 % zoom is a hard cut on its key frame. Glides are centred on the old key frame (the
+// half a frame width or 40 % zoom inside the same place is a continuous flow (flow.ts, v2: no cut), across a place or
+// time change a 3-8 f dissolve (XFADE); hard cuts are for gags and impacts only (about one per 40 s). Glides are centred on the old key frame (the
 // whoosh in the sound mix peaks there), so a glide key starts dur/2 earlier. Holds push in (dolly toward the look
 // point or a fov zoom near walls/towers): 0.15-0.35 %/f, ~0.6 %/f for ~35 f on the punch words. Rolls of 4-8 deg
 // over >= 18 f on emphasis beats, held tilt <= 0.07 rad.

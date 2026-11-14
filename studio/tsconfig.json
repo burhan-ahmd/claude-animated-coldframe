@@ -11,5 +11,5 @@
     "resolveJsonModule": true,
     "lib": ["DOM", "ES2020"]
   },
-  "include": ["src"]
+  "include": ["src", "scripts/flow_selftest.ts", "scripts/framing_selftest.ts"]
 }

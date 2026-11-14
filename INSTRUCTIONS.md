@@ -49,9 +49,10 @@ Upstream references (read-only, do not modify): `E:\2026\EssouliAnas_animation_c
 
 ```
 claude-animated-coldframe/               ← local folder; the public repo is github.com/burhan-ahmd/quiet-mill
-├── INSTRUCTIONS.md                      ← this file
+├── INSTRUCTIONS.md                      ← this file (pipeline law)
+├── SKILL.md                             ← craft law (v2.2): story formula, camera, captions, look values
 ├── README.md                            ← quick-start
-├── .github/workflows/coldframe.yml      ← THE render workflow (dispatch with knobs)
+├── .github/workflows/coldframe.yml      ← THE render workflow (dispatch with knobs + craft gate)
 ├── setup.ps1                            ← one-time local setup (npm + Kenney models)
 ├── scripts/fastdl.ps1                   ← parallel-segment fast downloader for release assets
 └── studio/                              ← the Remotion + three.js project
@@ -59,7 +60,10 @@ claude-animated-coldframe/               ← local folder; the public repo is gi
     ├── src/Root.tsx                     ← register every composition here
     ├── src/videos/                      ← compositions, one folder per video topic
     │   ├── bridge/                      ← example: SmokeTest.tsx (450f), BridgeShort.tsx (2025f)
-    │   └── fredlorz/                    ← voiceover reference: captions.tsx + generated words.ts (subtitles)
+    │   │   └── flow.ts / framing.ts / Captions.tsx   ← v2 craft files — copy into every new video
+    │   ├── fredlorz/                    ← voiceover reference: captions.tsx + generated words.ts (subtitles)
+    │   └── noonbell/                    ← 30 s short (900 frames)
+    ├── templates/                       ← SHOT_PLAN_template.md + example scripts (fill before building)
     ├── public/                          ← static assets, COMMITTED so every cloud machine sees them
     │   ├── bridge/kenney/               ← 26 CC0 GLB models + Textures/colormap.png
     │   ├── fonts/                       ← caption face + its licence (Lilita One, OFL)
@@ -68,11 +72,48 @@ claude-animated-coldframe/               ← local folder; the public repo is gi
     ├── shorts/<topic>/build_words.py    ← word onsets → captions data module (voiceover videos)
     └── scripts/
         ├── check-assets.mjs             ← asset gate (every referenced GLB + audio must exist)
+        ├── flow_selftest.ts             ← CI craft gate: camera-flow maths
+        ├── framing_selftest.ts          ← CI craft gate: safe-area/framing maths
         └── short_qa.py                  ← frame-by-frame QA of a downloaded MP4
 ```
 
 Outputs land locally (gitignored, never committed):
 `E:\2026\EssouliAnas_animation_coldframe\out\cloud\` (MP4s) and `out\qa\` (QA sheets).
+
+---
+
+## 1.5. THE V2 CRAFT LAYER (SKILL.md) — who owns which law
+
+The repo was upgraded (2026-11-14) to **Claude Animated Shorts v2.2** from
+`alifmahmudashik/shorts-studio-skill` (MIT, the next generation of the same skill lineage). There
+are now two law books, and they do not overlap:
+
+| | `INSTRUCTIONS.md` (this file) | `SKILL.md` (v2.2) |
+|---|---|---|
+| Owns | the **pipeline**: cloud rendering, one public repo, delivery, QA, measured numbers | the **craft**: story formula, comedy, camera flow, framing, captions, lighting, look values |
+| Read it | before touching the workflow | before writing a new video's story.ts / Captions usage |
+
+**What v2 added (all committed):**
+- `studio/src/videos/bridge/flow.ts` — continuous camera: one unbroken move chains subjects
+  (tower → crowd → face) instead of cuts. `flow(stops)`, `lookFrom()`, `flowFocus()`, `checkFlow()`.
+- `studio/src/videos/bridge/framing.ts` — safe-area / head-size / foreground-blob checks:
+  `checkShot(camera, items)` throws before you render a bad shot.
+- `studio/src/videos/bridge/Captions.tsx` — generic word-by-word captions, **defaults = the locked
+  house style** (see §3). Accepts any STT `words.json` via `normalizeWords()`; per-shot
+  `yPercent` dodges faces; accent colour exists but is OFF (house fill is locked off-white).
+- `studio/scripts/flow_selftest.ts` + `framing_selftest.ts` — run in CI (`verify-assets` job, now
+  "Verify assets + craft gate") and locally before every push.
+- `studio/templates/` — `SHOT_PLAN_template.md` (fill one row per shot BEFORE building), plus two
+  example scripts (bridge disaster formula, viral comedy formula).
+- `SKILL.md` — the full v2 craft manual (viral six-beat format, comedy engine, per-place lighting,
+  set-dressing minimums, reaction/dialogue rules, quality gate, measured look values).
+
+**Rules for the new video workflow:** copy `flow.ts`, `framing.ts`, `Captions.tsx` from `bridge/`
+into every new video folder; run `checkShot` on first/middle/last frame of every shot; fill the
+shot plan template first; read SKILL.md's 'Rules for every video' (six rules) and 'Quality gate'
+before dispatching. The 11 upstream engine files were verified byte-identical to ours — only the
+new files above were missing; our `Bridge.tsx`/`bridge_merge.py`/`bridge-stills.mjs` fixes are kept
+(they are newer than upstream's).
 
 ---
 
@@ -127,6 +168,11 @@ Timing is everything. **30 fps: `frame = round(seconds × 30)`; 1 s of video = 3
 
 Reference implementation: `studio/shorts/fredlorz/build_words.py` → `src/videos/fredlorz/words.ts`
 + `src/videos/fredlorz/captions.tsx` (built for the Fred Lorz film; one word at a time, popping).
+**Equivalent generic component (v2): `src/videos/bridge/Captions.tsx`** — same locked house look by
+default (Lilita One 176 px etc.), but driven by `normalizeWords()` which accepts any STT's
+`words.json` (seconds or ms, `{word|text, start|start_time, end|end_time}`) and supports a per-shot
+`yPercent={(frame) => ...}` to dodge faces. Use the generic component when you have a words.json;
+use the fredlorz `build_words.py` → `words.ts` pattern when you build timings from an SRT yourself.
 Silent videos skip this. Everything below is the part that goes wrong if you skip it.
 
 - **Timing comes from the word onsets, never from your own guess.** Generate a data module instead of
@@ -207,12 +253,18 @@ Create `out/qa/<video>_shots.json` (this drives `short_qa.py`):
 ```
 `flash` / `xfade` ranges are planned effects that QA must ignore when flagging white/black frames.
 
-### Step 7 — Asset gate (local, fast, mandatory)
+### Step 7 — Asset + craft gate (local, fast, mandatory)
 ```powershell
 cd studio; node scripts/check-assets.mjs
+npx tsx scripts/flow_selftest.ts     # camera-flow maths (no node_modules needed)
+npx tsx scripts/framing_selftest.ts  # safe-area/framing maths
+cd ..
+npx tsc --noEmit                     # run inside studio/
 ```
-It verifies every GLB/audio path referenced by the composition exists. CI runs it again as the
-`verify-assets` job; the render never starts if it fails. Fix errors here, not in the cloud.
+`check-assets` verifies every GLB/audio path referenced by the composition exists. The self-tests
+verify the v2 craft helpers (continuous camera flow, safe-area checks) still pass. CI runs all of
+this again as the `verify-assets` job; the render never starts if it fails. Fix errors here, not in
+the cloud.
 
 ### Step 8 — Commit + push (one repo, every video)
 ```powershell
@@ -385,6 +437,7 @@ powershell -File setup.ps1            # npm install + Kenney models into studio/
 
 # --- per video ---
 node studio\scripts\check-assets.mjs  # from studio/: cd studio; node scripts/check-assets.mjs
+#   craft gate (from studio/): npx tsx scripts/flow_selftest.ts ; npx tsx scripts/framing_selftest.ts
 git add -A; git commit -m "..."; git push origin main
 npx github:Razee4315/coldframe render <CompId> --chunks 20 --name <video>.mp4
 #   or: gh workflow run coldframe.yml --repo burhan-ahmd/quiet-mill -f composition=<CompId> -f chunks=20 -f min-frames-per-chunk=20 -f output-name=<video>.mp4

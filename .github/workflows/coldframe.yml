@@ -31,7 +31,7 @@ on:
 
 jobs:
   verify-assets:
-    name: Verify models + soundtrack
+    name: Verify assets + craft gate
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -41,6 +41,15 @@ jobs:
       - name: Check the bundle will find every asset
         working-directory: studio
         run: node scripts/check-assets.mjs
+      # Craft gate (v2 skill): the camera-flow and framing helpers are pure maths with their own
+      # self-tests; a regression here would corrupt every future render's camera or safe area.
+      # Costs ~1 min of free minutes; a failure here must stop the render (no continue-on-error).
+      - name: Craft gate - flow + framing self-tests
+        working-directory: studio
+        run: |
+          npm ci --no-audit --no-fund
+          npx tsx scripts/flow_selftest.ts
+          npx tsx scripts/framing_selftest.ts
 
   render:
     needs: verify-assets
