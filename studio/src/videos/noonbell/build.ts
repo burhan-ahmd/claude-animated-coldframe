@@ -347,6 +347,9 @@ export const kitClone = (kit: Kit, name: string, h: number): THREE.Object3D | nu
   return g;
 };
 // ---------------- houses ----------------
+/** style by index: JS % keeps the sign (si = Math.floor(z) is negative on the whole -z street), so wrap explicitly
+ *  — a negative index would return undefined and crash the texture painter on "reading 'wall'" (run 43549736126) */
+const stOf = <T,>(a: T[], i: number): T => a[((i % a.length) + a.length) % a.length];
 type Style = { wall: string; shutter: string; roof: string; timber?: boolean; brick?: boolean };
 // warm ochre / cream / sandstone / salmon walls (a near-neutral albedo turns lilac under the two-tone shade)
 const STYLES: Style[] = [
@@ -376,7 +379,7 @@ const ub = (b: Batch, mat: THREE.Material, m: THREE.Matrix4, x0: number, x1: num
 export const house = (b: Batch, x: number, z: number, yaw: number, w: number, d: number, h: number, si: number, y = 0, styles: Style[] = STYLES) => {
   const across = Math.abs(Math.sin(yaw)) > 0.5, hx = (across ? d : w) / 2 + 0.6, hz = (across ? w : d) / 2 + 0.6;
   if (inTheWay(x - hx, x + hx, y, y + h + d * 0.42 + 1.2, z - hz, z + hz)) return;
-  const st = styles[si % styles.length];
+  const st = stOf(styles, si);
   const m = new THREE.Matrix4().makeRotationY(yaw).setPosition(x, y, z);
   const front = lam(`hf${si}_${w}_${h}_${st.wall}`, () => ({ map: facadeHD(`hf${si}_${w}_${h}_${st.wall}`, w, h, { ...st, door: true }) }));
   const side = lam(`hs${si}_${h}_${st.wall}`, () => ({ map: facadeHD(`hs${si}_${h}_${st.wall}`, 8, h, st) }));
@@ -604,7 +607,7 @@ const bridgeSet = (b: Batch, kit: Kit) => {
 
 // ---------------- the jettied lane (z ~ -9..+3): upper storeys overhang, laundry lines, a hand cart ----------------
 const laneHouse = (b: Batch, side: number, z: number, w: number, h: number, si: number) => {
-  const st = STYLES[si % STYLES.length], x = side * 7.6, hw = w / 2;
+  const st = stOf(STYLES, si), x = side * 7.6, hw = w / 2;
   house(b, x, z, side < 0 ? Math.PI / 2 : -Math.PI / 2, w, 7, h, si);
   // jetty: an upper storey overhanging the street by 1.5 m, with a facade of its own
   const jy = 3.3, jh = h - jy - 1.0, jx0 = side * 6.1, jx1 = side * 7.6;
@@ -674,7 +677,7 @@ const climbWalls = (b: Batch, kit: Kit) => {
 /** a terrace house: its street-facing front plane sits at |x| = fx, over a plain box with terraceHD on the front;
  *  `fy` lifts the row onto the climb's terrace (whose coping is 0.95 m above the street). */
 const terraceRow = (b: Batch, side: number, z: number, w: number, h: number, si: number, fx = 6.4, fy = 0.95) => {
-  const st = STYLES_T[(si + 8) % STYLES_T.length], hw = w / 2, dep = 7.5, x = side * (fx + dep / 2), y = streetY(z) + fy;
+  const st = stOf(STYLES_T, si), hw = w / 2, dep = 7.5, x = side * (fx + dep / 2), y = streetY(z) + fy;
   const m = new THREE.Matrix4().makeRotationY(side < 0 ? Math.PI / 2 : -Math.PI / 2).setPosition(x, y, z);
   b.add(quadN(V(-hw, 0, dep / 2), V(hw, 0, dep / 2), V(hw, h, dep / 2), V(-hw, h, dep / 2), V(0, 0, 1)), lam(`tr${side}_${si}_${w}`, () => ({ map: terraceHD(`tr${side}_${si}_${w}`, w, h, st) })), m);
   b.add(boxGeo(V(Math.min(side * fx, side * (fx + dep)), y, z - hw - 0.02), V(Math.max(side * fx, side * (fx + dep)), y + h, z + hw + 0.02), 2), lam("wall" + st.wall, () => ({ color: st.wall })), new THREE.Matrix4());
