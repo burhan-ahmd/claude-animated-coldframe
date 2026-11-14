@@ -5,9 +5,11 @@ studio/shorts/*/audio/_cache/
 /out/
 # the Kenney CC0 models ARE committed on purpose: the cloud render must find them at bundle time
 # (get-models.mjs skips downloads when they are already present, so this stays reproducible)
-# reference frames from the studied channel: style study only, never redistributed
-references/frames/
-references/sheets/
+# references/frames/ + references/sheets/ ARE committed (owner decision 2026-11-14): stills and
+# contact sheets of the studied style reference, taken from the upstream MIT repo
+# (alifmahmudashik/shorts-studio-skill) so any agent can SEE the target style. The studied
+# channel's VIDEOS remain private study material: never copy their scripts, characters or shots,
+# never name the channel in a voice-over or description.
 # render output, voice and audio stems are big; keep scripts only
 __pycache__/
 *.pyc

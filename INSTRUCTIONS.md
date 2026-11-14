@@ -52,6 +52,8 @@ claude-animated-coldframe/               ← local folder; the public repo is gi
 ├── INSTRUCTIONS.md                      ← this file (pipeline law)
 ├── SKILL.md                             ← craft law (v2.2): story formula, camera, captions, look values
 ├── README.md                            ← quick-start
+├── CHANGELOG.md                         ← skill version history (v2.0 → v2.2)
+├── LICENSE                              ← MIT (original skill + v2 additions + this copy)
 ├── .github/workflows/coldframe.yml      ← THE render workflow (dispatch with knobs + craft gate)
 ├── setup.ps1                            ← one-time local setup (npm + Kenney models)
 ├── scripts/fastdl.ps1                   ← parallel-segment fast downloader for release assets
@@ -75,6 +77,10 @@ claude-animated-coldframe/               ← local folder; the public repo is gi
         ├── flow_selftest.ts             ← CI craft gate: camera-flow maths
         ├── framing_selftest.ts          ← CI craft gate: safe-area/framing maths
         └── short_qa.py                  ← frame-by-frame QA of a downloaded MP4
+└── references/                          ← style study (committed from the upstream v2.2 repo)
+    ├── STYLE_BIBLE.md + reports/        ← the measured look numbers
+    ├── frames/                          ← 38 reference stills — agents LOOK at these before building
+    └── sheets/                          ← 20 contact sheets, one per reference short
 ```
 
 Outputs land locally (gitignored, never committed):
@@ -94,6 +100,12 @@ are now two law books, and they do not overlap:
 | Read it | before touching the workflow | before writing a new video's story.ts / Captions usage |
 
 **What v2 added (all committed):**
+- `references/frames/` (38 stills) + `references/sheets/` (20 contact sheets) — the visual style
+  reference, committed from the upstream MIT repo per owner decision (2026-11-14). An agent starting
+  a new video should LOOK at these first: they show the target characters, lighting and composition
+  better than any text. The studied channel's videos stay private: never copy their scripts,
+  characters or shots, never name the channel.
+- `CHANGELOG.md` — upstream's v2.0 → v2.2 change log (what each version added).
 - `studio/src/videos/bridge/flow.ts` — continuous camera: one unbroken move chains subjects
   (tower → crowd → face) instead of cuts. `flow(stops)`, `lookFrom()`, `flowFocus()`, `checkFlow()`.
 - `studio/src/videos/bridge/framing.ts` — safe-area / head-size / foreground-blob checks:

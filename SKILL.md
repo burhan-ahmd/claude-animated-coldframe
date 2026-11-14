@@ -10,9 +10,13 @@ Proven example: **The Bridge That Fell for a Song**. It is an original 67 s shor
 - Script, voice and sound: `studio/shorts/bridge/` (SCRIPT.md, voice/, audio/).
 - Style research: `references/` (STYLE_BIBLE.md, reports/*.md).
 
-The style reference is a channel studied privately (`references/`). Those videos are private study
-material: never upload, publish or send them; never copy their scripts, characters or shots; never
-say the channel's name in a voice-over or description.
+The style reference is a channel studied privately. The distilled study lives in `references/`:
+STYLE_BIBLE.md, reports/*.md (the measured numbers), and `frames/` + `sheets/` — stills and contact
+sheets of the reference shorts (committed from the upstream MIT repo, owner decision 2026-11-14, so
+every agent can SEE the target style: read a few before building any new character or set, and make
+side-by-side sheets against them). The studied channel's VIDEOS remain private material: never copy
+their scripts, characters or shots — story, characters and voice are always OUR OWN — and never say
+the channel's name in a voice-over or description.
 
 **Pipeline law lives in `INSTRUCTIONS.md`** (cloud-only rendering, one public repo, fast delivery,
 the 19-issue table). This file is the craft law: story, look, camera, captions. When the two
@@ -276,7 +280,7 @@ Characters do not talk with moving lips and there is no second voice. The narrat
 
 ## Quality gate (before every full render)
 1. Framing check passes for every shot and every flow stop (`framing.ts`). Hard cuts are at most 2 per 60 s, every subject change inside one place is a flow (`checkFlow` has no warnings), and the flows cover at least 60 % of the screen time. Both self-tests pass (`npx tsx studio/scripts/flow_selftest.ts` and `framing_selftest.ts`).
-2. One contact sheet with a still per shot (first, middle, last frame), cut from the cloud-rendered test clip and compared against `references/frames/` if present locally.
+2. One contact sheet with a still per shot (first, middle, last frame), cut from the cloud-rendered test clip and compared side by side against `references/frames/` + `references/sheets/`.
 3. Score lighting, shadows, blur, framing, zoom, camera variety, captions, gags and 3D depth out of 10. Fix anything below 8 and re-render the affected shots.
    - 3D depth and set dressing: every shot has 3 depth layers, 6+ props in wides, background life in interiors and streets, and no blank surface over 8 % of the frame (see 'Set dressing and real 3D depth').
    - Captions: none overlaps a face, a key prop or a bubble.
