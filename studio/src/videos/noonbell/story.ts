@@ -147,11 +147,9 @@ const S3c = (f: number) => dolly(over(Px(f) - 2.9, Pz(f) + 2.4, 0.50), [Px(f) - 
 
 // ---- shot 4 (368-500, the bridge, z -10 -> -44): he crosses. Big open composition ----
 // S4a: one lens 1.75 m over the water, 18.5 m out from the span, panning with him across the whole crossing: the deck
-// in profile, quays, water and far bank, a 97 deg sweep. Pip covers 34 m at 7.7 m/s in this shot (contract), and a
-// pan that keeps him centred turns at v/d radians per frame, so the lens has to be this far out to stay under
-// 25 px/f (640*v/(d*tan) = 24 px/f at the closest approach; ~155 px tall, which is what a 7.7 m/s crossing looks
-// like in a wide). 0.12 %/f push.
-const S4a = (f: number) => dolly([18.5, WATER_Y + 1.75, -22.0], [Px(f), Py(f) + 1.15, Pz(f)], pushK(f, 368, 0.0012), { fov: 43, roll: -0.02 });
+// in profile, quays, water and far bank. The lens z sits 5.5 m OFF the boat's rowing line — the boat crosses at
+// z = Z_RIVER = -22 and at z -22 the boatman's hull filled the lens at f ~390-435 (run-2 defect D); peak pan ~22 px/f.
+const S4a = (f: number) => dolly([18.5, WATER_Y + 1.75, -27.5], [Px(f), Py(f) + 1.15, Pz(f)], pushK(f, 368, 0.0012), { fov: 43, roll: -0.02 });
 // S4b: CUT down to 0.92 m on the far half of the deck, ahead of him, a 3/4 as he walks the last of the span at the lens.
 const S4b = (f: number) => dolly(over(Px(f) - 3.6, Pz(f) - 5.4, 0.92), [Px(f) + 0.20, Py(f) + 1.15, Pz(f) - 0.15], pushK(f, 448, 0.002), { fov: 44, roll: 0.03 });
 
@@ -181,15 +179,16 @@ const S6b = (f: number) => dolly(over(Px(f) + 5.2, Pz(f) + 3.0, 4.10), [Px(f) + 
 const S6c = (f: number) => dolly(over(Px(f) + 4.9, Pz(f) + 2.85, 2.95), [Px(f) + 0.05, Py(f) + 1.05, Pz(f)], pushK(f, 702, 0.003, 0.005, 30), { fov: 39, roll: -0.045 });
 
 // ---- shot 7 (742-834, the bell, z -72 -> -76): the low sun-behind angle up the tower ----
-// S7a: THE low shot — 0.60 m at the tower foot, tilted 22 deg up past Pip's head at the shaft: the figure sits in the
-// bottom third, the wall and the sky carry the top (11 deg under S7b's tilt, so the 34 f glide down stays inside
-// 25 px/f — a 15 deg whip in 28 f would have peaked at 28).
-const S7a = (f: number) => dolly(over(Px(f) + 1.4, Pz(f) + 4.2, 0.60), [Px(f) + 0.1, Py(f) + 2.70, Pz(f) - 1.0], pushK(f, 742, 0.002), { fov: 45, roll: -0.03 });
-// S7b: tilt part-way down (still under 1 m) as the bell's first swing runs; 3 deg roll.
-const S7b = (f: number) => dolly(over(Px(f) + 1.5, Pz(f) + 3.6, 0.80), [Px(f) + 0.1, Py(f) + 1.75, Pz(f) - 1.15], pushK(f, 776, 0.0022), { fov: 43, roll: 0.02 });
-// S7c: still low behind him on the run, the tower held in the top of the frame and the look nearly where S7b left it:
-// the last 24 f are a 0.18 m rise plus a 3.7 deg roll, not a second crane.
-const S7c = (f: number) => dolly(over(Px(f) + 1.55, Pz(f) + 3.60, 0.98), [Px(f) + 0.15, Py(f) + 1.70, Pz(f) - 1.10], pushK(f, 810, 0.0025), { fov: 42, roll: -0.045 });
+// S7a: THE low shot — the lens sits low at Pip's right, 1 m over the terrace, and the look point is the BELFRY
+// itself (x -7.2, opening y 10.2..14.4 — a full street block left of the lane). ~26 deg up: the bell mouth lands
+// just above frame centre, Pip's head-and-shoulders hold the lower right. The belfry anchor is FIXED (the tower
+// does not move; the lens drifts with Pip, the pan stays ~2 px/f). The old Pip-relative look (2.7 m up the lane)
+// framed blank nave wall — the campanile never entered the frame (run-2 defect C).
+const S7a = (f: number) => dolly(over(Px(f) + 6.0, Pz(f) + 6.0, 1.0), [-5.0, 8.2, -75.5], pushK(f, 742, 0.002), { fov: 45, roll: -0.03 });
+// S7b: same rig, a step nearer, the look easing up to the bell mouth as the first swing runs; 3 deg roll.
+const S7b = (f: number) => dolly(over(Px(f) + 5.4, Pz(f) + 5.4, 1.15), [-4.7, 9.4, -75.7], pushK(f, 776, 0.0022), { fov: 43, roll: 0.02 });
+// S7c: still the same rig on the run to the door — a last small rise, the look settling onto the bell for the strike.
+const S7c = (f: number) => dolly(over(Px(f) + 5.0, Pz(f) + 5.0, 1.3), [-4.4, 10.2, -75.9], pushK(f, 810, 0.0025), { fov: 42, roll: -0.045 });
 
 // ---- shot 8 (834-900, the church door, z -76 -> -82): the cake is presented as the bell strikes (29.1 s) ----
 // S8a: warm 3/4 from in front of the church as he comes the last yards with the guests behind him.

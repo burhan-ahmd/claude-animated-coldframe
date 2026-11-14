@@ -19,9 +19,28 @@ import { cardShade, blobMaterial, CARD_K } from "./cardshade";
 import { LIGHTS } from "./lights";
 import {
   FPS, GEESE, WATER_Y, Z_MARKET, Z_SQUARE, Z_DOOR, Z_TOWER, clamp01, lin, streetY,
-  pipPos, pipYaw, pipMode, PipMode, cakePos, cakeHeld, bakerSpot, bakerPos, bakerYaw,
-  boatmanPos, boatmanYaw, goosePos, gooseBob, bellAngle, bellStrike,
+  pipX, pipZ, pipMode, PipMode, cakeHeld, bakerSpot, bakerPos, bakerYaw,
+  boatmanPos, boatmanYaw, gooseBob, bellAngle, bellStrike,
 } from "./contract";
+
+// ---- unit bridge (run-2 defect A): contract.pipZ is keyed in FRAMES 0..900 while pipX / pipMode are keyed in
+// SECONDS, and stage() receives seconds — so contract.pipPos / pipYaw / cakePos / goosePos cannot be used as-is
+// here (they park Pip at the bakery for the whole film). Re-derive every Pip-keyed helper in the cast's units:
+// z from pipZ(t * FPS), x from pipX(t). story.ts / world.ts already read pipZ in frames on their own.
+const pipAt = (t: number): [number, number, number] => [pipX(t), streetY(pipZ(t * FPS)), pipZ(t * FPS)];
+const pipYawAt = (t: number) => {
+  const dz = pipZ((t + 0.1) * FPS) - pipZ((t - 0.1) * FPS), dx = pipX(t + 0.1) - pipX(t - 0.1);
+  return Math.atan2(-dx, -dz);
+};
+const cakeAt = (t: number): [number, number, number] => {
+  const [x, y, z] = pipAt(t), m = pipMode(t);
+  const reach = m === "present" ? 0.55 : 0.34;
+  return [x, y + (m === "climb" ? 1.05 : 1.18), z - reach];
+};
+const gooseAt = (t: number, i: number): [number, number, number] => {
+  const back = 1.5 + i * 0.9, sway = 0.42 * Math.sin(t * 2.1 + i * 2.3);
+  return [pipX(t - 0.35) + sway + (i ? 0.5 : -0.5), streetY(pipZ((t - 0.35) * FPS)), pipZ((t - 0.35) * FPS) + back];
+};
 
 // ---------------- canvas pool ----------------
 type Entry = { cv: HTMLCanvasElement; tex: THREE.CanvasTexture; w: number; h: number };
@@ -248,7 +267,7 @@ const pipExpr = (t: number, m: PipMode): Expr => {
  *  on screen but fixes the draw order), wobbling while he climbs and puffing flour when he saves it. */
 const cake = (cam: CamInfo, t: number, out: Stage) => {
   if (!cakeHeld(t)) return;
-  const C = cakePos(t), m = pipMode(t);
+  const C = cakeAt(t), m = pipMode(t);
   const vx = cam.pos.x - C[0], vy = cam.pos.y - C[1], vz = cam.pos.z - C[2], vl = Math.hypot(vx, vy, vz) || 1;
   const off = m === "present" ? 0.5 : 0.3;
   const x = C[0] + (vx / vl) * off, y = C[1] - 0.06 + (vy / vl) * off, z = C[2] + (vz / vl) * off;
@@ -264,7 +283,7 @@ const cake = (cam: CamInfo, t: number, out: Stage) => {
 };
 
 const pip = (cam: CamInfo, t: number, out: Stage) => {
-  const P = pipPos(t), yaw = pipYaw(t), m = pipMode(t), pose = PIP_POSE[m];
+  const P = pipAt(t), yaw = pipYawAt(t), m = pipMode(t), pose = PIP_POSE[m];
   const dx = -Math.sin(yaw), dz = -Math.cos(yaw);
   const view = viewOf(cam, P[0], P[2], dx, dz);
   const ph = q(pipPhase(t), 120);
@@ -323,8 +342,11 @@ const couple = (cam: CamInfo, t: number, out: Stage) => {
   }
 };
 
-/** the bell-ringer in the belfry: he leans back on the rope, the rope jumps with the bell */
-const BELFRY: [number, number, number] = [0.0, 9.0, Z_TOWER - 0.4]; // ~9 m up the tower; retune against world.ts
+/** the bell-ringer in the belfry: he leans back on the rope, the rope jumps with the bell.
+ *  BELFRY = the campanile's belfry floor: the tower line is x -7.2 (CAMPANILE.x), the opening spans y 10.2..14.4
+ *  (RAMP_H 2.2 + baseH 8.0 -> +4.2), z just inside the nave-side opening (run-2 defect B: the old [0, 9, ...]
+ *  floated him on the nave roof). */
+const BELFRY: [number, number, number] = [-7.2, 10.25, Z_TOWER - 0.4];
 const ringer = (cam: CamInfo, t: number, out: Stage) => {
   if (t < 24.0) return;
   const pull = clamp01((bellAngle(t) - 0.06) / 0.56);
@@ -367,9 +389,9 @@ const boatman = (cam: CamInfo, t: number, out: Stage) => {
 /** the two geese that follow Pip through the market (they leave at the bridge) */
 const geese = (cam: CamInfo, t: number, out: Stage) => {
   if (t < 1.4 || t >= 17) return;
-  const yaw = pipYaw(t - 0.35), fdx = -Math.sin(yaw), fdz = -Math.cos(yaw);
+  const yaw = pipYawAt(t - 0.35), fdx = -Math.sin(yaw), fdz = -Math.cos(yaw);
   for (let i = 0; i < GEESE; i++) {
-    const P = goosePos(t, i), bob = gooseBob(t, i);
+    const P = gooseAt(t, i), bob = gooseBob(t, i);
     const mirror = fdx * cam.right.x + fdz * cam.right.z < 0;
     const light = light2D(cam, mirror);
     const d = cam.pos.distanceTo(tmp.set(P[0], P[1] + 0.35, P[2]));
@@ -413,11 +435,17 @@ const market = (cam: CamInfo, t: number, out: Stage) => {
     const f = marketFolk(i);
     const walk = i % 3 === 0, dir = i % 6 === 0 ? 1 : -1;
     const sp = (0.62 + hh(i, 4) * 0.4) * (f.kid ? 1.15 : 1);
-    const z0 = Z_MARKET + 11 - (i % 5) * 4.6 + (hh(i, 6) - 0.5) * 1.8;
-    const z = Math.max(2, Math.min(30, walk ? z0 + dir * sp * (t - 8.3) : z0));
-    const x = (i % 2 ? 1 : -1) * (1.3 + (i % 4) * 1.1) + (hh(i, 5) - 0.5) * 0.7;
+    // standing folk park BEHIND the stall line (|x| 5.25..7.45), never inside the S2 lens corridor; the walkers
+    // CROSS the aisle on x on a deterministic cycle instead of running along-street in front of the lens
+    // (run-2 defect E: 0.4-0.7 m faces filled frames f150 / f180)
+    const z0 = Z_MARKET + 9.5 - (i % 5) * 4.4 + (hh(i, 6) - 0.5) * 1.2;
+    const z = Math.max(2, Math.min(30, z0));
+    const side = i % 2 ? 1 : -1;
+    const x = walk
+      ? dir * (-6.6 + ((((t - 4.0) * sp) / 13.2 + hh(i, 8)) % 1) * 13.2)
+      : side * (5.6 + (i % 4) * 0.5) + (hh(i, 5) - 0.5) * 0.7;
     const y = streetY(z);
-    const fdx = walk ? 0 : -Math.sign(x) || 1, fdz = walk ? dir : 0;
+    const fdx = walk ? dir : -Math.sign(x) || 1, fdz = walk ? 0 : 0;
     const expr: Expr = i % 7 === 2 ? "laugh" : EXPR4[i % 4];
     const look = walk ? 0 : (i % 3 === 0 ? 1 : 0);
     const blink = lidAt(t, 200 + i);
