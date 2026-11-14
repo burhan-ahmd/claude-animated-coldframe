@@ -472,10 +472,10 @@ python studio\scripts\short_qa.py out\cloud\<video>.mp4 out\qa out\qa\<video>_sh
 - **Voiceover + SRT mode** (§3 Step 5) is specified but not yet exercised end-to-end — validate on
   the first voiceover video (full cloud render + QA) before trusting it.
 - **The `fast-download` release job** failed on its first live run (`gh release create --clobber`
-  is not a valid flag — issue #17); the flag fix is pushed. The release-download side was fully
-  validated manually (release `render-43369948536` exists; curl download 23.9 s, SHA256-identical
-  to the artifact copy). The fixed job will exercise itself on the next real render; if it ever
-  fails (it is `continue-on-error`), the artifact path still delivers — report it, don't ignore it.
+  is not a valid flag — issue #17); the flag fix was pushed and the job has since **succeeded in a
+  fully automated run** (run 43561667582, 2026-11-14: release `render-43561667582` published in 15 s,
+  asset downloaded via curl in 19.7 s). If it ever fails again (it is `continue-on-error`), the
+  artifact path still delivers — report it, don't ignore it.
 - **Stragglers:** a single heavy shot section can dominate wall time; chunk sizes are uniform, not
   content-aware.
 - **Remotion Lambda** would be faster still but costs money + AWS — deliberately not used.
@@ -483,6 +483,8 @@ python studio\scripts\short_qa.py out\cloud\<video>.mp4 out\qa out\qa\<video>_sh
 - **2025-frame `BridgeShort`** has not been cloud-rendered yet (needs its full soundtrack generated
   and wired first — `smoke-15s.wav` only covers the 15 s test).
 
-*Last verified: 2026-11-13 — 450-frame test rendered twice end-to-end (runs 43366515481 and
-43369948536, both 450/450 frames, wall ~10:15); delivery bake-off measured: artifact 149 s vs
-release 23.9 s (SHA256-identical copies), release https://github.com/burhan-ahmd/quiet-mill/releases/tag/render-43369948536*
+*Last verified: 2026-11-14 — v2.2 craft layer adopted and validated end-to-end: run 43561667582
+(ColdframeSmokeTest, 450/450 frames, QA all-green, boundary keyframes clean) with the CI craft gate
+passing live ("all flow tests passed" + "all framing tests passed") and the release job publishing
+automatically for the first time; delivery bake-off measured: artifact 149 s vs release 19.7-23.9 s
+(SHA256-identical copies), release https://github.com/burhan-ahmd/quiet-mill/releases/tag/render-43561667582*
